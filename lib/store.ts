@@ -35,10 +35,12 @@ interface AppStore {
 
   setupCourt: (courtNumber: number, playerName: string, opponentName: string) => Promise<void>
   updateSet: (courtNumber: number, setIndex: number, side: 'player' | 'opponent', value: number) => void
+  updateTiebreak: (courtNumber: number, setIndex: number, side: 'player' | 'opponent', value: number) => void
   addSet: (courtNumber: number) => void
   removeSet: (courtNumber: number, setIndex: number) => void
   addNote: (courtNumber: number, content: string, tags: NoteTag[]) => Promise<void>
   endMatch: (courtNumber: number) => Promise<void>
+  deleteMatch: (courtNumber: number) => Promise<void>
   clearCourt: (courtNumber: number) => void
   loadActiveMatches: () => Promise<void>
 }
@@ -113,6 +115,22 @@ export const useStore = create<AppStore>()(
       supabase.from('matches').update({ sets: court.sets }).eq('id', court.matchId)
     },
 
+    updateTiebreak: (courtNumber, setIndex, side, value) => {
+      set((s) => {
+        const court = s.courts[courtNumber - 1]
+        if (court.sets[setIndex]) {
+          if (!court.sets[setIndex].tiebreak) {
+            court.sets[setIndex].tiebreak = { player: 0, opponent: 0 }
+          }
+          court.sets[setIndex].tiebreak![side] = value
+        }
+      })
+      const court = get().courts[courtNumber - 1]
+      if (!court.matchId) return
+      const supabase = createClient()
+      supabase.from('matches').update({ sets: court.sets }).eq('id', court.matchId)
+    },
+
     addSet: (courtNumber) => {
       set((s) => {
         const court = s.courts[courtNumber - 1]
@@ -173,6 +191,14 @@ export const useStore = create<AppStore>()(
         s.courts[courtNumber - 1].status = 'finished'
         s.courts[courtNumber - 1].isSaving = false
       })
+    },
+
+    deleteMatch: async (courtNumber) => {
+      const court = get().courts[courtNumber - 1]
+      if (!court.matchId) return
+      const supabase = createClient()
+      await supabase.from('matches').delete().eq('id', court.matchId)
+      set((s) => { s.courts[courtNumber - 1] = emptyCourtState(courtNumber) })
     },
 
     clearCourt: (courtNumber) => {

@@ -30,11 +30,20 @@ function computeResult(sets: SetScore[]): 'win' | 'loss' | 'unknown' {
   return 'unknown'
 }
 
-export default function HistoryClient({ matches }: Props) {
+export default function HistoryClient({ matches: initialMatches }: Props) {
+  const [matches, setMatches] = useState(initialMatches)
   const [selectedId, setSelectedId] = useState<string | null>(
-    matches[0]?.id ?? null
+    initialMatches[0]?.id ?? null
   )
   const selected = matches.find(m => m.id === selectedId)
+
+  async function handleDelete(id: string) {
+    const supabase = (await import('@/lib/supabase')).createClient()
+    await supabase.from('matches').delete().eq('id', id)
+    const remaining = matches.filter(m => m.id !== id)
+    setMatches(remaining)
+    if (selectedId === id) setSelectedId(remaining[0]?.id ?? null)
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
@@ -52,32 +61,43 @@ export default function HistoryClient({ matches }: Props) {
           {matches.map(m => {
             const result = computeResult(m.sets)
             return (
-              <button
+              <div
                 key={m.id}
-                onClick={() => setSelectedId(m.id)}
                 className={clsx(
-                  'w-full text-left px-4 py-3 border-b border-gray-800/50 hover:bg-gray-900/50 transition',
+                  'relative border-b border-gray-800/50 group',
                   selectedId === m.id && 'bg-gray-900 border-l-2 border-l-green-500'
                 )}
               >
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-xs text-gray-500">Court {m.court_number}</span>
-                  <span className={clsx(
-                    'text-xs font-bold',
-                    result === 'win' ? 'text-green-400' : result === 'loss' ? 'text-red-400' : 'text-gray-500'
-                  )}>
-                    {result === 'win' ? 'W' : result === 'loss' ? 'L' : '—'}
-                  </span>
-                </div>
-                <p className="text-white text-sm font-medium truncate">{m.player_name}</p>
-                <p className="text-gray-500 text-xs truncate">vs {m.opponent_name}</p>
-                <p className="text-gray-500 text-xs mt-1">
-                  {m.sets.map(s => `${s.player}–${s.opponent}`).join('  ')}
-                </p>
-                <p className="text-gray-600 text-xs mt-1">
-                  {format(new Date(m.ended_at), 'MMM d, yyyy')}
-                </p>
-              </button>
+                <button
+                  onClick={() => setSelectedId(m.id)}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-900/50 transition"
+                >
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-xs text-gray-500">Court {m.court_number}</span>
+                    <span className={clsx(
+                      'text-xs font-bold',
+                      result === 'win' ? 'text-green-400' : result === 'loss' ? 'text-red-400' : 'text-gray-500'
+                    )}>
+                      {result === 'win' ? 'W' : result === 'loss' ? 'L' : '—'}
+                    </span>
+                  </div>
+                  <p className="text-white text-sm font-medium truncate">{m.player_name}</p>
+                  <p className="text-gray-500 text-xs truncate">vs {m.opponent_name}</p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    {m.sets.map(s => `${s.player}–${s.opponent}`).join('  ')}
+                  </p>
+                  <p className="text-gray-600 text-xs mt-1">
+                    {format(new Date(m.ended_at), 'MMM d, yyyy')}
+                  </p>
+                </button>
+                <button
+                  onClick={() => handleDelete(m.id)}
+                  className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition p-1 rounded"
+                  title="Delete match"
+                >
+                  🗑
+                </button>
+              </div>
             )
           })}
         </div>

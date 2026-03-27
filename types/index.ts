@@ -1,6 +1,7 @@
 export interface SetScore {
   player: number
   opponent: number
+  tiebreak?: { player: number; opponent: number }
 }
 
 export interface WeatherSnapshot {

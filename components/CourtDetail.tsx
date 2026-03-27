@@ -11,10 +11,11 @@ import clsx from 'clsx'
 interface Props { courtNumber: number }
 
 export default function CourtDetail({ courtNumber }: Props) {
-  const { courts, endMatch, clearCourt } = useStore()
+  const { courts, endMatch, clearCourt, deleteMatch } = useStore()
   const court = courts[courtNumber - 1]
   const [tab, setTab] = useState<'notes' | 'score'>('notes')
   const [confirmEnd, setConfirmEnd] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [summary, setSummary] = useState<string | null>(null)
   const [generatingSummary, setGeneratingSummary] = useState(false)
 
@@ -51,38 +52,71 @@ export default function CourtDetail({ courtNumber }: Props) {
             {court.weatherSnapshot && (
               <WeatherWidget weather={court.weatherSnapshot} compact />
             )}
-            {court.status === 'active' && (
-              !confirmEnd ? (
+            {court.status === 'active' && !confirmEnd && !confirmDelete && (
+              <div className="flex gap-1">
                 <button
                   onClick={() => setConfirmEnd(true)}
                   className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition"
                 >
                   End Match
                 </button>
-              ) : (
-                <div className="flex gap-1">
-                  <button
-                    onClick={async () => { await endMatch(courtNumber); setConfirmEnd(false) }}
-                    className="text-xs bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg transition"
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    onClick={() => setConfirmEnd(false)}
-                    className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1.5 rounded-lg transition"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-xs text-gray-600 hover:text-red-400 hover:bg-gray-800 px-2 py-1.5 rounded-lg transition"
+                  title="Delete match"
+                >
+                  🗑
+                </button>
+              </div>
             )}
-            {court.status === 'finished' && (
-              <button
-                onClick={() => clearCourt(courtNumber)}
-                className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition"
-              >
-                Clear Court
-              </button>
+            {court.status === 'active' && confirmEnd && (
+              <div className="flex gap-1">
+                <button
+                  onClick={async () => { await endMatch(courtNumber); setConfirmEnd(false) }}
+                  className="text-xs bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg transition"
+                >
+                  Confirm End
+                </button>
+                <button
+                  onClick={() => setConfirmEnd(false)}
+                  className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1.5 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            {confirmDelete && (
+              <div className="flex gap-1">
+                <button
+                  onClick={async () => { await deleteMatch(courtNumber); setConfirmDelete(false) }}
+                  className="text-xs bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg transition"
+                >
+                  Delete?
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1.5 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            {court.status === 'finished' && !confirmDelete && (
+              <div className="flex gap-1">
+                <button
+                  onClick={() => clearCourt(courtNumber)}
+                  className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-xs text-gray-600 hover:text-red-400 hover:bg-gray-800 px-2 py-1.5 rounded-lg transition"
+                  title="Delete match"
+                >
+                  🗑
+                </button>
+              </div>
             )}
           </div>
         </div>

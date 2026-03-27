@@ -34,21 +34,17 @@ export default function DashboardClient({ coachId }: Props) {
           ) : weatherAttempted ? (
             <span className="text-xs text-gray-600">📍 Location unavailable</span>
           ) : null}
-          <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
-            {[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(n => (
-              <button
-                key={n}
-                onClick={() => setCourtCount(n)}
-                className={clsx(
-                  'text-xs w-6 h-6 rounded transition font-medium',
-                  courtCount === n
-                    ? 'bg-green-600 text-white'
-                    : 'text-gray-500 hover:text-white'
-                )}
-              >
-                {n}
-              </button>
-            ))}
+          <div className="flex items-center gap-1.5 bg-gray-800/50 rounded-lg px-2 py-1.5">
+            <span className="text-xs text-gray-500 whitespace-nowrap">Courts</span>
+            <select
+              value={courtCount}
+              onChange={e => setCourtCount(Number(e.target.value))}
+              className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
+            >
+              {Array.from({ length: 14 }, (_, i) => i + 1).map(n => (
+                <option key={n} value={n} className="bg-gray-900">{n}</option>
+              ))}
+            </select>
           </div>
           <Link
             href="/history"

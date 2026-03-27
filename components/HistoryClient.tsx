@@ -97,6 +97,27 @@ export default function HistoryClient({ matches }: Props) {
 
 function MatchDetail({ match }: { match: MatchRow }) {
   const result = computeResult(match.sets)
+  const [summary, setSummary] = useState<string | null>(null)
+  const [generatingSummary, setGeneratingSummary] = useState(false)
+
+  async function handleGenerateSummary() {
+    setGeneratingSummary(true)
+    setSummary(null)
+    const res = await fetch('/api/summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        playerName: match.player_name,
+        opponentName: match.opponent_name,
+        sets: match.sets,
+        notes: match.notes,
+      }),
+    })
+    const data = await res.json()
+    setSummary(data.summary ?? data.error ?? 'Failed to generate summary')
+    setGeneratingSummary(false)
+  }
+
   return (
     <div className="max-w-2xl space-y-6">
       <div>
@@ -178,6 +199,22 @@ function MatchDetail({ match }: { match: MatchRow }) {
                   </p>
                 </div>
               ))}
+          </div>
+        )}
+      </div>
+
+      {/* AI Summary */}
+      <div className="pt-2">
+        <button
+          onClick={handleGenerateSummary}
+          disabled={generatingSummary}
+          className="w-full bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl px-4 py-2.5 transition"
+        >
+          {generatingSummary ? 'Generating summary...' : '✦ Generate AI Summary'}
+        </button>
+        {summary && (
+          <div className="mt-3 bg-purple-950/30 border border-purple-800/40 rounded-xl p-4">
+            <p className="text-purple-200 text-sm leading-relaxed">{summary}</p>
           </div>
         )}
       </div>

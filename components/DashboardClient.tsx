@@ -5,11 +5,12 @@ import CourtGrid from './CourtGrid'
 import CourtDetail from './CourtDetail'
 import WeatherWidget from './WeatherWidget'
 import Link from 'next/link'
+import clsx from 'clsx'
 
 interface Props { coachId: string }
 
 export default function DashboardClient({ coachId }: Props) {
-  const { setCoachId, loadActiveMatches, loadWeather, activeCourt, weather } = useStore()
+  const { setCoachId, loadActiveMatches, loadWeather, activeCourt, weather, courtCount, setCourtCount } = useStore()
 
   useEffect(() => {
     setCoachId(coachId)
@@ -27,6 +28,22 @@ export default function DashboardClient({ coachId }: Props) {
         </div>
         <div className="flex items-center gap-3">
           {weather && <WeatherWidget weather={weather} compact />}
+          <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
+            {[1,2,3,4,5,6,7,8].map(n => (
+              <button
+                key={n}
+                onClick={() => setCourtCount(n)}
+                className={clsx(
+                  'text-xs w-6 h-6 rounded transition font-medium',
+                  courtCount === n
+                    ? 'bg-green-600 text-white'
+                    : 'text-gray-500 hover:text-white'
+                )}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
           <Link
             href="/history"
             className="text-xs text-gray-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-gray-800"

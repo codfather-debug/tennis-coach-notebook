@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useStore } from '@/lib/store'
 import { NOTE_TAGS, type NoteTag } from '@/types'
 import clsx from 'clsx'
@@ -11,7 +11,40 @@ export default function NoteInput({ courtNumber }: Props) {
   const [content, setContent] = useState('')
   const [selectedTags, setSelectedTags] = useState<NoteTag[]>([])
   const [saving, setSaving] = useState(false)
+  const [listening, setListening] = useState(false)
+  const [speechSupported, setSpeechSupported] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const recognitionRef = useRef<any>(null)
+
+  useEffect(() => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (SR) {
+      setSpeechSupported(true)
+      const recognition = new SR()
+      recognition.continuous = true
+      recognition.interimResults = false
+      recognition.lang = 'en-US'
+      recognition.onresult = (e: any) => {
+        const transcript = Array.from(e.results)
+          .map((r: any) => r[0].transcript)
+          .join(' ')
+        setContent(prev => (prev ? prev + ' ' + transcript : transcript).trim())
+      }
+      recognition.onend = () => setListening(false)
+      recognitionRef.current = recognition
+    }
+  }, [])
+
+  function toggleMic() {
+    if (!recognitionRef.current) return
+    if (listening) {
+      recognitionRef.current.stop()
+      setListening(false)
+    } else {
+      recognitionRef.current.start()
+      setListening(true)
+    }
+  }
 
   function toggleTag(tag: NoteTag) {
     setSelectedTags(prev =>
@@ -23,6 +56,7 @@ export default function NoteInput({ courtNumber }: Props) {
     e?.preventDefault()
     const trimmed = content.trim()
     if (!trimmed) return
+    if (listening) { recognitionRef.current?.stop(); setListening(false) }
     setSaving(true)
     await addNote(courtNumber, trimmed, selectedTags)
     setContent('')
@@ -32,15 +66,11 @@ export default function NoteInput({ courtNumber }: Props) {
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    // Cmd/Ctrl+Enter to save
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      handleSubmit()
-    }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit()
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      {/* Tags */}
       <div className="flex flex-wrap gap-1.5">
         {NOTE_TAGS.map(tag => (
           <button
@@ -59,24 +89,45 @@ export default function NoteInput({ courtNumber }: Props) {
         ))}
       </div>
 
-      {/* Text input */}
       <div className="relative">
         <textarea
           ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Quick note... (⌘↵ to save)"
+          placeholder={listening ? 'Listening...' : 'Quick note... (⌘↵ to save)'}
           rows={2}
-          className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition text-sm resize-none pr-20"
+          className={clsx(
+            'w-full bg-gray-900 border rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-1 transition text-sm resize-none pr-24',
+            listening
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+              : 'border-gray-700 focus:border-green-500 focus:ring-green-500'
+          )}
         />
-        <button
-          type="submit"
-          disabled={!content.trim() || saving}
-          className="absolute right-2 bottom-2 bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
-        >
-          {saving ? '...' : 'Save'}
-        </button>
+        <div className="absolute right-2 bottom-2 flex gap-1">
+          {speechSupported && (
+            <button
+              type="button"
+              onClick={toggleMic}
+              className={clsx(
+                'text-xs font-semibold px-2.5 py-1.5 rounded-lg transition',
+                listening
+                  ? 'bg-red-600 hover:bg-red-500 text-white animate-pulse'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+              )}
+              title={listening ? 'Stop recording' : 'Start voice note'}
+            >
+              🎙️
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={!content.trim() || saving}
+            className="bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+          >
+            {saving ? '...' : 'Save'}
+          </button>
+        </div>
       </div>
     </form>
   )

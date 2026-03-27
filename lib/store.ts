@@ -22,12 +22,14 @@ function emptyCourtState(courtNumber: number): CourtState {
 interface AppStore {
   courts: CourtState[]
   activeCourt: number | null        // 1-indexed
+  courtCount: number
   weather: WeatherSnapshot | null
   coachId: string | null
 
   // Actions
   setCoachId: (id: string) => void
   setActiveCourt: (court: number) => void
+  setCourtCount: (n: number) => void
   setWeather: (w: WeatherSnapshot) => void
   loadWeather: () => Promise<void>
 
@@ -45,12 +47,15 @@ export const useStore = create<AppStore>()(
   immer((set, get) => ({
     courts: Array.from({ length: 8 }, (_, i) => emptyCourtState(i + 1)),
     activeCourt: null,
+    courtCount: 4,
     weather: null,
     coachId: null,
 
     setCoachId: (id) => set((s) => { s.coachId = id }),
 
     setActiveCourt: (court) => set((s) => { s.activeCourt = court }),
+
+    setCourtCount: (n) => set((s) => { s.courtCount = n }),
 
     setWeather: (w) => set((s) => { s.weather = w }),
 

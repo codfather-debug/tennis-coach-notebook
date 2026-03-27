@@ -15,6 +15,26 @@ export default function CourtDetail({ courtNumber }: Props) {
   const court = courts[courtNumber - 1]
   const [tab, setTab] = useState<'notes' | 'score'>('notes')
   const [confirmEnd, setConfirmEnd] = useState(false)
+  const [summary, setSummary] = useState<string | null>(null)
+  const [generatingSummary, setGeneratingSummary] = useState(false)
+
+  async function handleGenerateSummary() {
+    setGeneratingSummary(true)
+    setSummary(null)
+    const res = await fetch('/api/summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        playerName: court.playerName,
+        opponentName: court.opponentName,
+        sets: court.sets,
+        notes: court.notes,
+      }),
+    })
+    const data = await res.json()
+    setSummary(data.summary ?? data.error ?? 'Failed to generate summary')
+    setGeneratingSummary(false)
+  }
 
   if (court.status === 'empty') return <MatchSetup courtNumber={courtNumber} />
 
@@ -103,6 +123,23 @@ export default function CourtDetail({ courtNumber }: Props) {
           </div>
         )}
       </div>
+
+      {court.status === 'finished' && (
+        <div className="px-5 py-4 border-t border-gray-800 flex-shrink-0">
+          <button
+            onClick={handleGenerateSummary}
+            disabled={generatingSummary}
+            className="w-full bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl px-4 py-2.5 transition"
+          >
+            {generatingSummary ? 'Generating summary...' : '✦ Generate AI Summary'}
+          </button>
+          {summary && (
+            <div className="mt-3 bg-purple-950/30 border border-purple-800/40 rounded-xl p-4">
+              <p className="text-purple-200 text-sm leading-relaxed">{summary}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

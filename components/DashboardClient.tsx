@@ -23,38 +23,42 @@ export default function DashboardClient({ coachId }: Props) {
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/50 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🎾</span>
-          <span className="font-bold text-white text-sm tracking-wide">Coach Notebook</span>
-        </div>
-        <div className="flex items-center gap-3">
-          {weather ? (
-            <WeatherWidget weather={weather} compact />
-          ) : weatherAttempted ? (
-            <span className="text-xs text-gray-600">📍 Location unavailable</span>
-          ) : null}
-          <div className="flex items-center gap-1.5 bg-gray-800/50 rounded-lg px-2 py-1.5">
-            <span className="text-xs text-gray-500 whitespace-nowrap">Courts</span>
-            <select
-              value={courtCount}
-              onChange={e => setCourtCount(Number(e.target.value))}
-              className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
-            >
-              {Array.from({ length: 14 }, (_, i) => i + 1).map(n => (
-                <option key={n} value={n} className="bg-gray-900">{n}</option>
-              ))}
-            </select>
+      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🎾</span>
+            <span className="font-bold text-white text-sm tracking-wide">Coach Notebook</span>
           </div>
+          <div className="flex items-center gap-3">
+            {weather ? (
+              <WeatherWidget weather={weather} compact />
+            ) : weatherAttempted ? (
+              <span className="text-xs text-gray-600">📍 Location unavailable</span>
+            ) : null}
+            <div className="flex items-center gap-1.5 bg-gray-800/50 rounded-lg px-2 py-1.5">
+              <span className="text-xs text-gray-500 whitespace-nowrap">Courts</span>
+              <select
+                value={courtCount}
+                onChange={e => setCourtCount(Number(e.target.value))}
+                className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
+              >
+                {Array.from({ length: 14 }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={n} className="bg-gray-900">{n}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2 px-4 pb-2">
           <Link
             href="/players"
-            className="text-xs text-gray-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-gray-800"
+            className="flex-1 text-center text-xs text-gray-400 hover:text-white transition py-1.5 rounded-lg hover:bg-gray-800 bg-gray-800/40"
           >
             Players
           </Link>
           <Link
             href="/history"
-            className="text-xs text-gray-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-gray-800"
+            className="flex-1 text-center text-xs text-gray-400 hover:text-white transition py-1.5 rounded-lg hover:bg-gray-800 bg-gray-800/40"
           >
             History
           </Link>

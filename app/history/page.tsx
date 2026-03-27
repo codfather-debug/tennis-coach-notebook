@@ -15,5 +15,17 @@ export default async function HistoryPage() {
     .order('ended_at', { ascending: false })
     .limit(50)
 
-  return <HistoryClient matches={matches ?? []} />
+  // Transform notes from snake_case DB fields to camelCase app types
+  const transformed = (matches ?? []).map(m => ({
+    ...m,
+    notes: (m.notes ?? []).map((n: any) => ({
+      id: n.id,
+      matchId: n.match_id,
+      content: n.content,
+      tags: n.tags ?? [],
+      timestamp: n.note_timestamp,
+    })),
+  }))
+
+  return <HistoryClient matches={transformed} />
 }

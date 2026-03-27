@@ -14,9 +14,9 @@ export default function ScoreInput({ courtNumber }: Props) {
   const locked = isFinished && !editing
 
   return (
-    <div className="px-5 py-4 space-y-4">
+    <div className="px-5 py-4 space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Set Scores</h3>
+        <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Final Set Scores</h3>
         <div className="flex items-center gap-2">
           {isFinished && (
             <button
@@ -28,7 +28,7 @@ export default function ScoreInput({ courtNumber }: Props) {
                   : 'bg-gray-800 text-gray-400 hover:text-white'
               )}
             >
-              {editing ? 'Done Editing' : 'Edit Score'}
+              {editing ? 'Done' : 'Edit'}
             </button>
           )}
           {!locked && court.sets.length < 5 && (
@@ -56,77 +56,77 @@ export default function ScoreInput({ courtNumber }: Props) {
         </div>
       )}
 
-      {court.sets.length > 0 && (
-        <div className="grid grid-cols-[40px_1fr_24px_1fr_32px] gap-2 items-center mb-1">
-          <span />
-          <span className="text-xs text-gray-500 text-center font-medium truncate">{court.playerName}</span>
-          <span />
-          <span className="text-xs text-gray-500 text-center font-medium truncate">{court.opponentName}</span>
-          <span />
-        </div>
-      )}
-
       {court.sets.map((set, i) => {
         const isTied = set.player === 6 && set.opponent === 6
         return (
-          <div key={i} className="space-y-2">
-            {/* Set row */}
-            <div className="grid grid-cols-[40px_1fr_24px_1fr_32px] gap-2 items-center">
-              <span className="text-xs text-gray-500 font-mono text-center">S{i + 1}</span>
+          <div key={i} className="space-y-3 pb-4 border-b border-gray-800/50 last:border-0">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Set {i + 1}</span>
+              {!locked && (
+                <button
+                  onClick={() => removeSet(courtNumber, i)}
+                  className="text-gray-700 hover:text-red-400 transition text-sm"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
 
-              <ScoreStepper
+            {/* Player row */}
+            <div className="space-y-1">
+              <p className="text-xs text-gray-500 truncate">{court.playerName}</p>
+              <NumberLine
                 value={set.player}
-                onChange={(v) => updateSet(courtNumber, i, 'player', v)}
+                onChange={v => updateSet(courtNumber, i, 'player', v)}
                 disabled={locked}
                 highlight={set.player > set.opponent && !isTied}
                 max={7}
               />
+            </div>
 
-              <span className="text-gray-600 text-center text-sm">–</span>
-
-              <ScoreStepper
+            {/* Opponent row */}
+            <div className="space-y-1">
+              <p className="text-xs text-gray-500 truncate">{court.opponentName}</p>
+              <NumberLine
                 value={set.opponent}
-                onChange={(v) => updateSet(courtNumber, i, 'opponent', v)}
+                onChange={v => updateSet(courtNumber, i, 'opponent', v)}
                 disabled={locked}
                 highlight={set.opponent > set.player && !isTied}
                 max={7}
               />
-
-              {!locked ? (
-                <button
-                  onClick={() => removeSet(courtNumber, i)}
-                  className="text-gray-700 hover:text-red-400 transition text-lg leading-none"
-                  aria-label="Remove set"
-                >
-                  ×
-                </button>
-              ) : <span />}
             </div>
 
-            {/* Tiebreak row — shown when 6-6 */}
+            {/* Tiebreak — shown when 6-6 */}
             {isTied && (
-              <div className="grid grid-cols-[40px_1fr_24px_1fr_32px] gap-2 items-center">
-                <span className="text-xs text-yellow-600 font-mono text-center">TB</span>
-
-                <ScoreStepper
-                  value={set.tiebreak?.player ?? 0}
-                  onChange={(v) => updateTiebreak(courtNumber, i, 'player', v)}
-                  disabled={locked}
-                  highlight={(set.tiebreak?.player ?? 0) > (set.tiebreak?.opponent ?? 0)}
-                  max={99}
-                />
-
-                <span className="text-gray-600 text-center text-sm">–</span>
-
-                <ScoreStepper
-                  value={set.tiebreak?.opponent ?? 0}
-                  onChange={(v) => updateTiebreak(courtNumber, i, 'opponent', v)}
-                  disabled={locked}
-                  highlight={(set.tiebreak?.opponent ?? 0) > (set.tiebreak?.player ?? 0)}
-                  max={99}
-                />
-
-                <span />
+              <div className="bg-yellow-950/20 border border-yellow-800/30 rounded-xl p-3 space-y-2">
+                <p className="text-xs text-yellow-500 font-semibold uppercase tracking-wider">Tiebreak</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1 truncate">{court.playerName}</p>
+                    <input
+                      type="number"
+                      min={0}
+                      value={set.tiebreak?.player ?? ''}
+                      onChange={e => updateTiebreak(courtNumber, i, 'player', Number(e.target.value))}
+                      disabled={locked}
+                      placeholder="0"
+                      className="w-full bg-gray-900 border border-yellow-700/50 rounded-lg px-3 py-2 text-white text-lg font-bold text-center focus:outline-none focus:ring-1 focus:ring-yellow-500 disabled:opacity-50"
+                    />
+                  </div>
+                  <span className="text-gray-600 text-xl font-bold mt-4">–</span>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 mb-1 truncate">{court.opponentName}</p>
+                    <input
+                      type="number"
+                      min={0}
+                      value={set.tiebreak?.opponent ?? ''}
+                      onChange={e => updateTiebreak(courtNumber, i, 'opponent', Number(e.target.value))}
+                      disabled={locked}
+                      placeholder="0"
+                      className="w-full bg-gray-900 border border-yellow-700/50 rounded-lg px-3 py-2 text-white text-lg font-bold text-center focus:outline-none focus:ring-1 focus:ring-yellow-500 disabled:opacity-50"
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -136,7 +136,7 @@ export default function ScoreInput({ courtNumber }: Props) {
   )
 }
 
-interface StepperProps {
+interface NumberLineProps {
   value: number
   onChange: (v: number) => void
   disabled: boolean
@@ -144,31 +144,27 @@ interface StepperProps {
   max: number
 }
 
-function ScoreStepper({ value, onChange, disabled, highlight, max }: StepperProps) {
+function NumberLine({ value, onChange, disabled, highlight, max }: NumberLineProps) {
   return (
-    <div className="flex items-center bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => onChange(Math.max(0, value - 1))}
-        disabled={disabled || value === 0}
-        className="px-3 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 transition text-lg leading-none font-light"
-      >
-        −
-      </button>
-      <span className={clsx(
-        'flex-1 text-center text-lg font-bold tabular-nums min-w-[2.5rem]',
-        highlight ? 'text-green-300' : 'text-gray-300'
-      )}>
-        {value}
-      </span>
-      <button
-        type="button"
-        onClick={() => onChange(Math.min(max, value + 1))}
-        disabled={disabled || value === max}
-        className="px-3 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 transition text-lg leading-none font-light"
-      >
-        +
-      </button>
+    <div className="flex gap-1.5 flex-wrap">
+      {Array.from({ length: max + 1 }, (_, i) => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => onChange(i)}
+          disabled={disabled}
+          className={clsx(
+            'w-9 h-9 rounded-lg text-sm font-bold transition',
+            value === i
+              ? highlight
+                ? 'bg-green-600 text-white shadow-lg shadow-green-900/50'
+                : 'bg-gray-600 text-white'
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed'
+          )}
+        >
+          {i}
+        </button>
+      ))}
     </div>
   )
 }

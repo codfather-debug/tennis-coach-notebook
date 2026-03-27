@@ -17,15 +17,12 @@ export default function NoteInput({ courtNumber }: Props) {
   const [listening, setListening] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(false)
   const [side, setSide] = useState<Side>(null)
+  const [livePlayer, setLivePlayer] = useState<number | null>(null)
+  const [liveOpponent, setLiveOpponent] = useState<number | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const recognitionRef = useRef<any>(null)
 
-  // Current set score display
-  const currentSet = court.sets.length > 0 ? court.sets[court.sets.length - 1] : null
-  const currentSetNum = court.sets.length
-  const setLabel = currentSet
-    ? `S${currentSetNum} ${currentSet.player}–${currentSet.opponent}`
-    : null
+  const hasLiveScore = livePlayer !== null && liveOpponent !== null
 
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -69,9 +66,8 @@ export default function NoteInput({ courtNumber }: Props) {
     if (!trimmed) return
     if (listening) { recognitionRef.current?.stop(); setListening(false) }
 
-    // Build context prefix from set score + serving/returning
-    const contextParts = []
-    if (setLabel) contextParts.push(setLabel)
+    const contextParts: string[] = []
+    if (hasLiveScore) contextParts.push(`${livePlayer}–${liveOpponent}`)
     if (side) contextParts.push(side === 'serving' ? 'Serving' : 'Returning')
     const finalContent = contextParts.length
       ? `[${contextParts.join(' · ')}] ${trimmed}`
@@ -91,29 +87,91 @@ export default function NoteInput({ courtNumber }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      {/* Context row: set score + serving/returning */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {setLabel && (
-          <span className="text-xs font-mono bg-gray-800 text-green-300 px-2.5 py-1 rounded-lg border border-gray-700">
-            {setLabel}
-          </span>
-        )}
-        <div className="flex gap-1">
-          {(['serving', 'returning'] as Side[]).map(s => (
+
+      {/* Live score quick-entry */}
+      <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Current Score</span>
+          {hasLiveScore && (
             <button
-              key={s}
               type="button"
-              onClick={() => setSide(prev => prev === s ? null : s)}
-              className={clsx(
-                'text-xs px-2.5 py-1 rounded-lg border transition font-medium capitalize',
-                side === s
-                  ? 'bg-yellow-600/30 text-yellow-300 border-yellow-600/50'
-                  : 'bg-transparent border-gray-700 text-gray-500 hover:text-gray-300 hover:border-gray-500'
-              )}
+              onClick={() => { setLivePlayer(null); setLiveOpponent(null) }}
+              className="text-xs text-gray-600 hover:text-gray-400 transition"
             >
-              {s}
+              Clear
             </button>
-          ))}
+          )}
+        </div>
+
+        {/* Player score */}
+        <div className="space-y-1">
+          <p className="text-xs text-gray-600 truncate">{court.playerName}</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {[0,1,2,3,4,5,6].map(n => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setLivePlayer(prev => prev === n ? null : n)}
+                className={clsx(
+                  'w-8 h-8 rounded-lg text-sm font-bold transition',
+                  livePlayer === n
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                )}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Opponent score */}
+        <div className="space-y-1">
+          <p className="text-xs text-gray-600 truncate">{court.opponentName}</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {[0,1,2,3,4,5,6].map(n => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setLiveOpponent(prev => prev === n ? null : n)}
+                className={clsx(
+                  'w-8 h-8 rounded-lg text-sm font-bold transition',
+                  liveOpponent === n
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                )}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Preview + serving toggle */}
+        <div className="flex items-center justify-between pt-1">
+          <span className={clsx(
+            'text-sm font-mono font-bold',
+            hasLiveScore ? 'text-white' : 'text-gray-700'
+          )}>
+            {hasLiveScore ? `${livePlayer}–${liveOpponent}` : '–'}
+          </span>
+          <div className="flex gap-1">
+            {(['serving', 'returning'] as Side[]).map(s => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSide(prev => prev === s ? null : s)}
+                className={clsx(
+                  'text-xs px-2.5 py-1 rounded-lg border transition font-medium capitalize',
+                  side === s
+                    ? 'bg-yellow-600/30 text-yellow-300 border-yellow-600/50'
+                    : 'bg-transparent border-gray-700 text-gray-500 hover:text-gray-300 hover:border-gray-500'
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -47,6 +47,12 @@ export default function DashboardClient({ coachId }: Props) {
             </select>
           </div>
           <Link
+            href="/players"
+            className="text-xs text-gray-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-gray-800"
+          >
+            Players
+          </Link>
+          <Link
             href="/history"
             className="text-xs text-gray-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-gray-800"
           >

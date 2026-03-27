@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import type { SetScore, Note, WeatherSnapshot } from '@/types'
 import { NOTE_TAGS } from '@/types'
 import { format } from 'date-fns'
@@ -185,6 +185,17 @@ function MatchDetail({ match }: { match: MatchRow }) {
   const [summary, setSummary] = useState<string | null>(null)
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [playerEmail, setPlayerEmail] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/players')
+      .then(r => r.json())
+      .then((players: { name: string; email: string | null }[]) => {
+        const found = players.find(p => p.name.toLowerCase() === match.player_name.toLowerCase())
+        if (found?.email) setPlayerEmail(found.email)
+      })
+      .catch(() => {})
+  }, [match.player_name])
 
   async function handleGenerateSummary() {
     setGeneratingSummary(true)
@@ -204,7 +215,7 @@ function MatchDetail({ match }: { match: MatchRow }) {
     setGeneratingSummary(false)
   }
 
-  async function handleExport() {
+  function exportText(): string {
     const lines: string[] = []
     lines.push(`MATCH REPORT`)
     lines.push(`${match.player_name} vs ${match.opponent_name}`)
@@ -231,7 +242,11 @@ function MatchDetail({ match }: { match: MatchRow }) {
       lines.push(`AI SUMMARY`)
       lines.push(summary)
     }
-    await navigator.clipboard.writeText(lines.join('\n'))
+    return lines.join('\n')
+  }
+
+  async function handleExport() {
+    await navigator.clipboard.writeText(exportText())
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -345,6 +360,14 @@ function MatchDetail({ match }: { match: MatchRow }) {
           <div className="bg-purple-950/30 border border-purple-800/40 rounded-xl p-4">
             <p className="text-purple-200 text-sm leading-relaxed">{summary}</p>
           </div>
+        )}
+        {playerEmail && (
+          <a
+            href={`mailto:${playerEmail}?subject=${encodeURIComponent(`Match Report: ${match.player_name} vs ${match.opponent_name}`)}&body=${encodeURIComponent(exportText())}`}
+            className="w-full flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 transition"
+          >
+            📧 Send to {playerEmail}
+          </a>
         )}
       </div>
     </div>

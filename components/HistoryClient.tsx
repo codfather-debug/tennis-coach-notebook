@@ -32,16 +32,23 @@ function computeResult(sets: SetScore[]): 'win' | 'loss' | 'unknown' {
 
 export default function HistoryClient({ matches: initialMatches }: Props) {
   const [matches, setMatches] = useState(initialMatches)
-  const [selectedId, setSelectedId] = useState<string | null>(initialMatches[0]?.id ?? null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const selected = matches.find(m => m.id === selectedId)
+
+  // On mobile: show list or detail. On desktop: show both.
+  const showDetail = !!selectedId
 
   async function handleDelete(id: string) {
     const supabase = (await import('@/lib/supabase')).createClient()
     await supabase.from('matches').delete().eq('id', id)
     const remaining = matches.filter(m => m.id !== id)
     setMatches(remaining)
-    if (selectedId === id) setSelectedId(remaining[0]?.id ?? null)
+    if (selectedId === id) setSelectedId(null)
+  }
+
+  function selectMatch(id: string) {
+    setSelectedId(id)
   }
 
   const filtered = useMemo(() => {
@@ -67,14 +74,32 @@ export default function HistoryClient({ matches: initialMatches }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
-      <header className="flex items-center gap-3 px-4 py-3 border-b border-gray-800 bg-gray-900/50 backdrop-blur">
-        <Link href="/dashboard" className="text-gray-400 hover:text-white transition text-sm">← Dashboard</Link>
-        <h1 className="text-white font-bold">Match History</h1>
+      <header className="flex items-center gap-3 px-4 py-3 border-b border-gray-800 bg-gray-900/50 backdrop-blur flex-shrink-0">
+        {showDetail ? (
+          <button
+            onClick={() => setSelectedId(null)}
+            className="text-gray-400 hover:text-white transition text-sm lg:hidden"
+          >
+            ← Back
+          </button>
+        ) : (
+          <Link href="/dashboard" className="text-gray-400 hover:text-white transition text-sm">← Dashboard</Link>
+        )}
+        <h1 className="text-white font-bold">
+          {showDetail && selected ? selected.player_name : 'Match History'}
+        </h1>
+        {!showDetail && (
+          <Link href="/dashboard" className="ml-auto text-gray-400 hover:text-white transition text-sm hidden lg:block">← Dashboard</Link>
+        )}
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Match list */}
-        <div className="w-72 border-r border-gray-800 overflow-y-auto flex-shrink-0 flex flex-col">
+        {/* Match list — full screen on mobile, sidebar on desktop */}
+        <div className={clsx(
+          'border-r border-gray-800 overflow-y-auto flex-shrink-0 flex flex-col',
+          'w-full lg:w-72',
+          showDetail ? 'hidden lg:flex' : 'flex'
+        )}>
           {/* Search */}
           <div className="p-3 border-b border-gray-800 flex-shrink-0">
             <input
@@ -107,7 +132,7 @@ export default function HistoryClient({ matches: initialMatches }: Props) {
                     )}
                   >
                     <button
-                      onClick={() => setSelectedId(m.id)}
+                      onClick={() => selectMatch(m.id)}
                       className="w-full text-left px-4 py-3 hover:bg-gray-900/50 transition"
                     >
                       <div className="flex items-center justify-between mb-0.5">
@@ -139,8 +164,11 @@ export default function HistoryClient({ matches: initialMatches }: Props) {
           ))}
         </div>
 
-        {/* Match detail */}
-        <div className="flex-1 overflow-y-auto p-6">
+        {/* Match detail — full screen on mobile, panel on desktop */}
+        <div className={clsx(
+          'flex-1 overflow-y-auto p-6',
+          showDetail ? 'block' : 'hidden lg:block'
+        )}>
           {selected ? (
             <MatchDetail match={selected} />
           ) : (

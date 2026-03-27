@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import type { CourtState, SetScore, Note, NoteTag, WeatherSnapshot, MatchStatus } from '@/types'
+import type { CourtState, SetScore, Note, NoteTag, WeatherSnapshot, MatchStatus, MatchType } from '@/types'
 import { createClient } from '@/lib/supabase'
 import { getLocationAndWeather } from '@/lib/weather'
 
@@ -8,8 +8,12 @@ function emptyCourtState(courtNumber: number): CourtState {
   return {
     courtNumber,
     matchId: null,
+    matchType: 'singles',
     playerName: '',
+    playerName2: '',
     opponentName: '',
+    opponentName2: '',
+    meetId: null,
     status: 'empty',
     sets: [],
     notes: [],
@@ -19,21 +23,33 @@ function emptyCourtState(courtNumber: number): CourtState {
   }
 }
 
+interface SetupOpts {
+  playerName: string
+  opponentName: string
+  matchType: MatchType
+  playerName2?: string
+  opponentName2?: string
+}
+
 interface AppStore {
   courts: CourtState[]
-  activeCourt: number | null        // 1-indexed
+  activeCourt: number | null
   courtCount: number
   weather: WeatherSnapshot | null
   coachId: string | null
+  activeMeetId: string | null
+  activeMeetName: string | null
 
-  // Actions
   setCoachId: (id: string) => void
   setActiveCourt: (court: number) => void
   setCourtCount: (n: number) => void
   setWeather: (w: WeatherSnapshot) => void
   loadWeather: () => Promise<void>
 
-  setupCourt: (courtNumber: number, playerName: string, opponentName: string) => Promise<void>
+  createMeet: (name: string) => Promise<void>
+  endMeet: () => void
+
+  setupCourt: (courtNumber: number, opts: SetupOpts) => Promise<void>
   updateSet: (courtNumber: number, setIndex: number, side: 'player' | 'opponent', value: number) => void
   updateTiebreak: (courtNumber: number, setIndex: number, side: 'player' | 'opponent', value: number) => void
   addSet: (courtNumber: number) => void
@@ -53,6 +69,8 @@ export const useStore = create<AppStore>()(
     courtCount: 4,
     weather: null,
     coachId: null,
+    activeMeetId: null,
+    activeMeetName: null,
 
     setCoachId: (id) => set((s) => { s.coachId = id }),
 
@@ -67,9 +85,31 @@ export const useStore = create<AppStore>()(
       if (snap) set((s) => { s.weather = snap })
     },
 
-    setupCourt: async (courtNumber, playerName, opponentName) => {
+    createMeet: async (name) => {
       const supabase = createClient()
-      const { coachId, weather } = get()
+      const { coachId } = get()
+      if (!coachId) return
+      const { data } = await supabase
+        .from('meets')
+        .insert({ coach_id: coachId, name })
+        .select('id, name')
+        .single()
+      if (data) {
+        set((s) => {
+          s.activeMeetId = data.id
+          s.activeMeetName = data.name
+        })
+      }
+    },
+
+    endMeet: () => set((s) => {
+      s.activeMeetId = null
+      s.activeMeetName = null
+    }),
+
+    setupCourt: async (courtNumber, opts) => {
+      const supabase = createClient()
+      const { coachId, weather, activeMeetId } = get()
       if (!coachId) return
 
       const { data, error } = await supabase
@@ -77,8 +117,12 @@ export const useStore = create<AppStore>()(
         .insert({
           coach_id: coachId,
           court_number: courtNumber,
-          player_name: playerName,
-          opponent_name: opponentName,
+          player_name: opts.playerName,
+          opponent_name: opts.opponentName,
+          match_type: opts.matchType,
+          player_name_2: opts.playerName2 ?? null,
+          opponent_name_2: opts.opponentName2 ?? null,
+          meet_id: activeMeetId ?? null,
           status: 'active',
           sets: [],
           weather_snapshot: weather ?? null,
@@ -92,8 +136,12 @@ export const useStore = create<AppStore>()(
       set((s) => {
         const court = s.courts[courtNumber - 1]
         court.matchId = data.id
-        court.playerName = playerName
-        court.opponentName = opponentName
+        court.matchType = opts.matchType
+        court.playerName = opts.playerName
+        court.playerName2 = opts.playerName2 ?? ''
+        court.opponentName = opts.opponentName
+        court.opponentName2 = opts.opponentName2 ?? ''
+        court.meetId = activeMeetId
         court.status = 'active'
         court.sets = []
         court.notes = []
@@ -109,7 +157,6 @@ export const useStore = create<AppStore>()(
           court.sets[setIndex][side] = value
         }
       })
-      // Debounce DB write — fire-and-forget
       const court = get().courts[courtNumber - 1]
       if (!court.matchId) return
       const supabase = createClient()
@@ -160,10 +207,8 @@ export const useStore = create<AppStore>()(
         timestamp: new Date().toISOString(),
       }
 
-      // Optimistic update
       set((s) => { s.courts[courtNumber - 1].notes.unshift(note) })
 
-      // Persist
       await supabase.from('notes').insert({
         id: note.id,
         match_id: note.matchId,
@@ -235,8 +280,12 @@ export const useStore = create<AppStore>()(
           s.courts[idx] = {
             courtNumber: m.court_number,
             matchId: m.id,
+            matchType: m.match_type ?? 'singles',
             playerName: m.player_name,
+            playerName2: m.player_name_2 ?? '',
             opponentName: m.opponent_name,
+            opponentName2: m.opponent_name_2 ?? '',
+            meetId: m.meet_id ?? null,
             status: 'active',
             sets: m.sets ?? [],
             notes: (m.notes ?? []).map((n: any) => ({

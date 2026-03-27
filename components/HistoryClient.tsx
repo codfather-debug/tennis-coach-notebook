@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import type { SetScore, Note, WeatherSnapshot } from '@/types'
 import { NOTE_TAGS } from '@/types'
 import { format } from 'date-fns'
@@ -11,7 +11,11 @@ interface MatchRow {
   id: string
   court_number: number
   player_name: string
+  player_name_2: string | null
   opponent_name: string
+  opponent_name_2: string | null
+  match_type: string | null
+  meet_id: string | null
   sets: SetScore[]
   notes: Note[]
   weather_snapshot: WeatherSnapshot | null
@@ -19,7 +23,16 @@ interface MatchRow {
   ended_at: string
 }
 
-interface Props { matches: MatchRow[] }
+interface MeetRow {
+  id: string
+  name: string
+  created_at: string
+}
+
+interface Props {
+  matches: MatchRow[]
+  meets: MeetRow[]
+}
 
 function computeResult(sets: SetScore[]): 'win' | 'loss' | 'unknown' {
   if (!sets.length) return 'unknown'
@@ -30,13 +43,12 @@ function computeResult(sets: SetScore[]): 'win' | 'loss' | 'unknown' {
   return 'unknown'
 }
 
-export default function HistoryClient({ matches: initialMatches }: Props) {
+export default function HistoryClient({ matches: initialMatches, meets }: Props) {
   const [matches, setMatches] = useState(initialMatches)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [expandedMeets, setExpandedMeets] = useState<Set<string>>(new Set())
   const selected = matches.find(m => m.id === selectedId)
-
-  // On mobile: show list or detail. On desktop: show both.
   const showDetail = !!selectedId
 
   async function handleDelete(id: string) {
@@ -47,8 +59,13 @@ export default function HistoryClient({ matches: initialMatches }: Props) {
     if (selectedId === id) setSelectedId(null)
   }
 
-  function selectMatch(id: string) {
-    setSelectedId(id)
+  function toggleMeet(meetId: string) {
+    setExpandedMeets(prev => {
+      const next = new Set(prev)
+      if (next.has(meetId)) next.delete(meetId)
+      else next.add(meetId)
+      return next
+    })
   }
 
   const filtered = useMemo(() => {
@@ -56,21 +73,82 @@ export default function HistoryClient({ matches: initialMatches }: Props) {
     if (!q) return matches
     return matches.filter(m =>
       m.player_name.toLowerCase().includes(q) ||
-      m.opponent_name.toLowerCase().includes(q)
+      m.opponent_name.toLowerCase().includes(q) ||
+      (m.player_name_2 ?? '').toLowerCase().includes(q) ||
+      (m.opponent_name_2 ?? '').toLowerCase().includes(q)
     )
   }, [matches, search])
 
-  // Group by date
-  const grouped = useMemo(() => {
+  // Matches grouped by meet
+  const meetMatches = useMemo(() => {
+    const result: { meet: MeetRow; matches: MatchRow[] }[] = []
+    for (const meet of meets) {
+      const ms = filtered.filter(m => m.meet_id === meet.id)
+      if (ms.length) result.push({ meet, matches: ms })
+    }
+    return result
+  }, [filtered, meets])
+
+  // Standalone matches (no meet)
+  const standaloneMatches = useMemo(() => filtered.filter(m => !m.meet_id), [filtered])
+
+  // Group standalone by date
+  const groupedStandalone = useMemo(() => {
     const groups: { date: string; matches: MatchRow[] }[] = []
-    for (const m of filtered) {
+    for (const m of standaloneMatches) {
       const date = m.ended_at ? format(new Date(m.ended_at), 'yyyy-MM-dd') : 'Unknown'
       const existing = groups.find(g => g.date === date)
       if (existing) existing.matches.push(m)
       else groups.push({ date, matches: [m] })
     }
     return groups
-  }, [filtered])
+  }, [standaloneMatches])
+
+  function MatchItem({ m }: { m: MatchRow }) {
+    const result = computeResult(m.sets)
+    const isDoubles = m.match_type === 'doubles'
+    return (
+      <div
+        className={clsx(
+          'relative border-b border-gray-800/50 group',
+          selectedId === m.id && 'bg-gray-900 border-l-2 border-l-green-500'
+        )}
+      >
+        <button
+          onClick={() => setSelectedId(m.id)}
+          className="w-full text-left px-4 py-3 hover:bg-gray-900/50 transition"
+        >
+          <div className="flex items-center justify-between mb-0.5">
+            <span className="text-xs text-gray-500">
+              Court {m.court_number}{isDoubles ? ' · Doubles' : ''}
+            </span>
+            <span className={clsx(
+              'text-xs font-bold',
+              result === 'win' ? 'text-green-400' : result === 'loss' ? 'text-red-400' : 'text-gray-500'
+            )}>
+              {result === 'win' ? 'W' : result === 'loss' ? 'L' : '—'}
+            </span>
+          </div>
+          <p className="text-white text-sm font-medium truncate">
+            {isDoubles && m.player_name_2 ? `${m.player_name} / ${m.player_name_2}` : m.player_name}
+          </p>
+          <p className="text-gray-500 text-xs truncate">
+            vs {isDoubles && m.opponent_name_2 ? `${m.opponent_name} / ${m.opponent_name_2}` : m.opponent_name}
+          </p>
+          <p className="text-gray-500 text-xs mt-1 font-mono">
+            {m.sets.map(s => `${s.player}–${s.opponent}${s.tiebreak ? ` (${s.tiebreak.player}–${s.tiebreak.opponent})` : ''}`).join('  ')}
+          </p>
+        </button>
+        <button
+          onClick={() => handleDelete(m.id)}
+          className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition p-1 rounded"
+          title="Delete match"
+        >
+          🗑
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
@@ -94,13 +172,12 @@ export default function HistoryClient({ matches: initialMatches }: Props) {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Match list — full screen on mobile, sidebar on desktop */}
+        {/* List */}
         <div className={clsx(
           'border-r border-gray-800 overflow-y-auto flex-shrink-0 flex flex-col',
           'w-full lg:w-72',
           showDetail ? 'hidden lg:flex' : 'flex'
         )}>
-          {/* Search */}
           <div className="p-3 border-b border-gray-800 flex-shrink-0">
             <input
               value={search}
@@ -116,55 +193,39 @@ export default function HistoryClient({ matches: initialMatches }: Props) {
             </p>
           )}
 
-          {grouped.map(group => (
+          {/* Meets section */}
+          {meetMatches.map(({ meet, matches: meetMs }) => {
+            const isExpanded = expandedMeets.has(meet.id)
+            const meetDate = format(new Date(meet.created_at), 'MMM d, yyyy')
+            return (
+              <div key={meet.id}>
+                <button
+                  onClick={() => toggleMeet(meet.id)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 bg-yellow-950/30 border-b border-yellow-800/30 hover:bg-yellow-950/50 transition"
+                >
+                  <div className="text-left">
+                    <p className="text-yellow-300 text-xs font-bold">📋 {meet.name}</p>
+                    <p className="text-yellow-600 text-xs">{meetDate} · {meetMs.length} court{meetMs.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <span className="text-yellow-600 text-xs">{isExpanded ? '▲' : '▼'}</span>
+                </button>
+                {isExpanded && meetMs.map(m => <MatchItem key={m.id} m={m} />)}
+              </div>
+            )
+          })}
+
+          {/* Standalone matches */}
+          {groupedStandalone.map(group => (
             <div key={group.date}>
               <div className="px-4 py-2 bg-gray-900/80 text-xs text-gray-500 font-semibold uppercase tracking-wider sticky top-0 z-10">
                 {group.date !== 'Unknown' ? format(new Date(group.date), 'MMM d, yyyy') : 'Unknown date'}
               </div>
-              {group.matches.map(m => {
-                const result = computeResult(m.sets)
-                return (
-                  <div
-                    key={m.id}
-                    className={clsx(
-                      'relative border-b border-gray-800/50 group',
-                      selectedId === m.id && 'bg-gray-900 border-l-2 border-l-green-500'
-                    )}
-                  >
-                    <button
-                      onClick={() => selectMatch(m.id)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-900/50 transition"
-                    >
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-xs text-gray-500">Court {m.court_number}</span>
-                        <span className={clsx(
-                          'text-xs font-bold',
-                          result === 'win' ? 'text-green-400' : result === 'loss' ? 'text-red-400' : 'text-gray-500'
-                        )}>
-                          {result === 'win' ? 'W' : result === 'loss' ? 'L' : '—'}
-                        </span>
-                      </div>
-                      <p className="text-white text-sm font-medium truncate">{m.player_name}</p>
-                      <p className="text-gray-500 text-xs truncate">vs {m.opponent_name}</p>
-                      <p className="text-gray-500 text-xs mt-1 font-mono">
-                        {m.sets.map(s => `${s.player}–${s.opponent}${s.tiebreak ? ` (${s.tiebreak.player}–${s.tiebreak.opponent})` : ''}`).join('  ')}
-                      </p>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(m.id)}
-                      className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition p-1 rounded"
-                      title="Delete match"
-                    >
-                      🗑
-                    </button>
-                  </div>
-                )
-              })}
+              {group.matches.map(m => <MatchItem key={m.id} m={m} />)}
             </div>
           ))}
         </div>
 
-        {/* Match detail — full screen on mobile, panel on desktop */}
+        {/* Detail */}
         <div className={clsx(
           'flex-1 overflow-y-auto p-3 sm:p-6 min-w-0',
           showDetail ? 'block' : 'hidden lg:block'
@@ -186,8 +247,16 @@ function MatchDetail({ match }: { match: MatchRow }) {
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [copied, setCopied] = useState(false)
   const [playerEmail, setPlayerEmail] = useState<string | null>(null)
+  const isDoubles = match.match_type === 'doubles'
 
-  useEffect(() => {
+  const playerDisplay = isDoubles && match.player_name_2
+    ? `${match.player_name} / ${match.player_name_2}`
+    : match.player_name
+  const opponentDisplay = isDoubles && match.opponent_name_2
+    ? `${match.opponent_name} / ${match.opponent_name_2}`
+    : match.opponent_name
+
+  useState(() => {
     fetch('/api/players')
       .then(r => r.json())
       .then((players: { name: string; email: string | null }[]) => {
@@ -195,7 +264,7 @@ function MatchDetail({ match }: { match: MatchRow }) {
         if (found?.email) setPlayerEmail(found.email)
       })
       .catch(() => {})
-  }, [match.player_name])
+  })
 
   async function handleGenerateSummary() {
     setGeneratingSummary(true)
@@ -204,8 +273,8 @@ function MatchDetail({ match }: { match: MatchRow }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        playerName: match.player_name,
-        opponentName: match.opponent_name,
+        playerName: playerDisplay,
+        opponentName: opponentDisplay,
         sets: match.sets,
         notes: match.notes,
       }),
@@ -218,7 +287,7 @@ function MatchDetail({ match }: { match: MatchRow }) {
   function exportText(): string {
     const lines: string[] = []
     lines.push(`MATCH REPORT`)
-    lines.push(`${match.player_name} vs ${match.opponent_name}`)
+    lines.push(`${playerDisplay} vs ${opponentDisplay}`)
     lines.push(`Court ${match.court_number} · ${format(new Date(match.started_at), 'PPp')}`)
     lines.push(``)
     lines.push(`SCORE`)
@@ -255,7 +324,7 @@ function MatchDetail({ match }: { match: MatchRow }) {
     <div className="max-w-2xl space-y-6 w-full min-w-0">
       <div>
         <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <h2 className="text-white font-bold text-xl truncate">{match.player_name}</h2>
+          <h2 className="text-white font-bold text-xl truncate">{playerDisplay}</h2>
           <span className={clsx(
             'text-sm font-bold px-2 py-0.5 rounded flex-shrink-0',
             result === 'win' ? 'bg-green-900/50 text-green-400' :
@@ -270,7 +339,7 @@ function MatchDetail({ match }: { match: MatchRow }) {
             {copied ? '✓ Copied' : '↗ Export'}
           </button>
         </div>
-        <p className="text-gray-400">vs {match.opponent_name} · Court {match.court_number}</p>
+        <p className="text-gray-400">vs {opponentDisplay} · Court {match.court_number}</p>
         <p className="text-gray-500 text-sm mt-1">
           {format(new Date(match.started_at), 'PPp')}
           {match.ended_at && ` → ${format(new Date(match.ended_at), 'p')}`}
@@ -363,7 +432,7 @@ function MatchDetail({ match }: { match: MatchRow }) {
         )}
         {playerEmail && (
           <a
-            href={`mailto:${playerEmail}?subject=${encodeURIComponent(`Match Report: ${match.player_name} vs ${match.opponent_name}`)}&body=${encodeURIComponent(exportText())}`}
+            href={`mailto:${playerEmail}?subject=${encodeURIComponent(`Match Report: ${playerDisplay} vs ${opponentDisplay}`)}&body=${encodeURIComponent(exportText())}`}
             className="w-full flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 transition"
           >
             📧 Send to {playerEmail}

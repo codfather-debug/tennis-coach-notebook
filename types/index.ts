@@ -55,19 +55,29 @@ export interface Note {
 }
 
 export type MatchStatus = 'empty' | 'active' | 'finished'
+export type MatchType = 'singles' | 'doubles'
 
 export interface CourtState {
   courtNumber: number
   matchId: string | null
+  matchType: MatchType
   playerName: string
+  playerName2: string
   opponentName: string
+  opponentName2: string
+  meetId: string | null
   status: MatchStatus
   sets: SetScore[]
   notes: Note[]
   weatherSnapshot: WeatherSnapshot | null
   startedAt: string | null
-  // UI state
   isSaving: boolean
+}
+
+export interface Meet {
+  id: string
+  name: string
+  createdAt: string
 }
 
 export interface Player {

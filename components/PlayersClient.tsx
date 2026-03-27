@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 
 interface Player {
@@ -17,6 +17,48 @@ export default function PlayersClient({ initialPlayers }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleImportCSV(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    setImportResult(null)
+
+    const text = await file.text()
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+    // Skip header row
+    const dataLines = lines[0]?.toLowerCase().startsWith('name') ? lines.slice(1) : lines
+
+    let added = 0
+    let skipped = 0
+    for (const line of dataLines) {
+      const [name, email] = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''))
+      if (!name) { skipped++; continue }
+      const res = await fetch('/api/players', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email: email || null }),
+      })
+      if (res.ok) {
+        const player = await res.json()
+        if (player?.id) {
+          setPlayers(prev => [...prev, player].sort((a, b) => a.name.localeCompare(b.name)))
+          added++
+        } else {
+          skipped++
+        }
+      } else {
+        skipped++
+      }
+    }
+
+    setImportResult(`Imported ${added} player${added !== 1 ? 's' : ''}${skipped ? `, skipped ${skipped}` : ''}.`)
+    setImporting(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -55,17 +97,45 @@ export default function PlayersClient({ initialPlayers }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
-      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/50 backdrop-blur">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="text-gray-400 hover:text-white transition text-sm">← Dashboard</Link>
-          <h1 className="text-white font-bold">Player Roster</h1>
+      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard" className="text-gray-400 hover:text-white transition text-sm">← Dashboard</Link>
+            <h1 className="text-white font-bold">Player Roster</h1>
+          </div>
+          <button
+            onClick={() => setAddingNew(true)}
+            className="text-xs bg-green-600 hover:bg-green-500 text-white font-semibold px-3 py-1.5 rounded-lg transition"
+          >
+            + Add Player
+          </button>
         </div>
-        <button
-          onClick={() => setAddingNew(true)}
-          className="text-xs bg-green-600 hover:bg-green-500 text-white font-semibold px-3 py-1.5 rounded-lg transition"
-        >
-          + Add Player
-        </button>
+        <div className="flex gap-2 px-4 pb-3">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="flex-1 text-center text-xs text-gray-400 hover:text-white transition py-1.5 rounded-lg hover:bg-gray-800 bg-gray-800/40 disabled:opacity-50"
+          >
+            {importing ? 'Importing...' : '↑ Import CSV'}
+          </button>
+          <a
+            href="/roster-template.csv"
+            download
+            className="flex-1 text-center text-xs text-gray-400 hover:text-white transition py-1.5 rounded-lg hover:bg-gray-800 bg-gray-800/40"
+          >
+            ↓ Download Template
+          </a>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleImportCSV}
+            className="hidden"
+          />
+        </div>
+        {importResult && (
+          <p className="px-4 pb-2 text-xs text-green-400">{importResult}</p>
+        )}
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 max-w-lg mx-auto w-full">

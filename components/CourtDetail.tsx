@@ -91,7 +91,11 @@ export default function CourtDetail({ courtNumber }: Props) {
               />
             ) : (
               <div className="flex items-center gap-1">
-                <h2 className="text-white font-bold text-lg leading-tight">{court.playerName}</h2>
+                <h2 className="text-white font-bold text-lg leading-tight">
+                  {court.matchType === 'doubles' && court.playerName2
+                    ? `${court.playerName} / ${court.playerName2}`
+                    : court.playerName}
+                </h2>
                 {court.status === 'active' && (
                   <button
                     onClick={() => { setNameValue(court.playerName); setEditingName(true) }}
@@ -103,7 +107,11 @@ export default function CourtDetail({ courtNumber }: Props) {
                 )}
               </div>
             )}
-            <p className="text-gray-400 text-sm">vs {court.opponentName}</p>
+            <p className="text-gray-400 text-sm">
+              vs {court.matchType === 'doubles' && court.opponentName2
+                ? `${court.opponentName} / ${court.opponentName2}`
+                : court.opponentName}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {court.weatherSnapshot && (

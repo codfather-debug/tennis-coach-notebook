@@ -10,9 +10,15 @@ import clsx from 'clsx'
 interface Props { coachId: string }
 
 export default function DashboardClient({ coachId }: Props) {
-  const { setCoachId, loadActiveMatches, loadWeather, activeCourt, weather, courtCount, setCourtCount } = useStore()
+  const {
+    setCoachId, loadActiveMatches, loadWeather,
+    activeCourt, weather, courtCount, setCourtCount,
+    activeMeetId, activeMeetName, createMeet, endMeet,
+  } = useStore()
   const [loading, setLoading] = useState(true)
   const [weatherAttempted, setWeatherAttempted] = useState(false)
+  const [showMeetModal, setShowMeetModal] = useState(false)
+  const [meetNameInput, setMeetNameInput] = useState('')
 
   useEffect(() => {
     setCoachId(coachId)
@@ -20,10 +26,19 @@ export default function DashboardClient({ coachId }: Props) {
     loadWeather().then(() => setWeatherAttempted(true))
   }, [coachId])
 
+  async function handleCreateMeet(e: React.FormEvent) {
+    e.preventDefault()
+    if (!meetNameInput.trim()) return
+    await createMeet(meetNameInput.trim())
+    setMeetNameInput('')
+    setShowMeetModal(false)
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
       {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur">
+      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur flex-shrink-0">
+        {/* Row 1: logo + weather + courts */}
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="text-xl">🎾</span>
@@ -49,6 +64,8 @@ export default function DashboardClient({ coachId }: Props) {
             </div>
           </div>
         </div>
+
+        {/* Row 2: Players + History */}
         <div className="flex gap-2 px-4 pb-2">
           <Link
             href="/players"
@@ -63,11 +80,69 @@ export default function DashboardClient({ coachId }: Props) {
             History
           </Link>
         </div>
+
+        {/* Row 3: Meet bar */}
+        <div className="flex items-center gap-2 px-4 pb-3 border-t border-gray-800/50 pt-2">
+          {activeMeetId ? (
+            <>
+              <span className="text-xs text-yellow-400">📋</span>
+              <span className="text-xs font-semibold text-yellow-300 truncate">{activeMeetName}</span>
+              <button
+                onClick={endMeet}
+                className="ml-auto text-xs text-gray-500 hover:text-white transition px-2 py-1 rounded hover:bg-gray-800"
+              >
+                End Meet
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setShowMeetModal(true)}
+              className="text-xs text-gray-500 hover:text-green-400 transition font-medium"
+            >
+              + Start Meet
+            </button>
+          )}
+        </div>
       </header>
+
+      {/* Meet name modal */}
+      {showMeetModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <form
+            onSubmit={handleCreateMeet}
+            className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm space-y-4"
+          >
+            <h2 className="text-white font-bold text-lg">Name This Meet</h2>
+            <p className="text-gray-500 text-sm">All courts set up after this will be grouped together in history.</p>
+            <input
+              autoFocus
+              value={meetNameInput}
+              onChange={e => setMeetNameInput(e.target.value)}
+              placeholder="e.g. JV vs Eastside, Tuesday Practice"
+              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition"
+            />
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={!meetNameInput.trim()}
+                className="flex-1 bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition"
+              >
+                Start Meet
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowMeetModal(false); setMeetNameInput('') }}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-xl py-2.5 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Main */}
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Court Grid */}
         <div className="lg:w-auto lg:min-w-[520px] p-4">
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -80,7 +155,6 @@ export default function DashboardClient({ coachId }: Props) {
           )}
         </div>
 
-        {/* Detail Panel */}
         <div className="flex-1 border-t lg:border-t-0 lg:border-l border-gray-800 overflow-hidden">
           {activeCourt ? (
             <CourtDetail courtNumber={activeCourt} />

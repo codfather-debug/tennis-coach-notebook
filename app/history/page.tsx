@@ -7,16 +7,22 @@ export default async function HistoryPage() {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) redirect('/login')
 
-  const { data: matches } = await supabase
-    .from('matches')
-    .select('*, notes(*)')
-    .eq('coach_id', session.user.id)
-    .eq('status', 'finished')
-    .order('ended_at', { ascending: false })
-    .limit(50)
+  const [matchesRes, meetsRes] = await Promise.all([
+    supabase
+      .from('matches')
+      .select('*, notes(*)')
+      .eq('coach_id', session.user.id)
+      .eq('status', 'finished')
+      .order('ended_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('meets')
+      .select('*')
+      .eq('coach_id', session.user.id)
+      .order('created_at', { ascending: false }),
+  ])
 
-  // Transform notes from snake_case DB fields to camelCase app types
-  const transformed = (matches ?? []).map(m => ({
+  const transformed = (matchesRes.data ?? []).map(m => ({
     ...m,
     notes: (m.notes ?? []).map((n: any) => ({
       id: n.id,
@@ -27,5 +33,11 @@ export default async function HistoryPage() {
     })),
   }))
 
-  return <HistoryClient matches={transformed} />
+  const meets = (meetsRes.data ?? []).map(m => ({
+    id: m.id,
+    name: m.name,
+    created_at: m.created_at,
+  }))
+
+  return <HistoryClient matches={transformed} meets={meets} />
 }

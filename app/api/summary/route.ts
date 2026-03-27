@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   const { playerName, opponentName, sets, notes } = await request.json()
 
-  const apiKey = process.env.XAI_API_KEY
+  const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {
-    return NextResponse.json({ error: 'XAI_API_KEY not configured' }, { status: 500 })
+    return NextResponse.json({ error: 'GROQ_API_KEY not configured' }, { status: 500 })
   }
 
   const setScores = sets.length
@@ -27,14 +27,14 @@ ${notesList}
 
 Write a 3-5 sentence summary covering: overall match result, key patterns observed (from the tags and notes), one strength and one area to work on. Be direct and specific. Address the coach, not the player.`
 
-  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'grok-3-latest',
+      model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 300,
     }),

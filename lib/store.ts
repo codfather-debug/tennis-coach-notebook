@@ -45,7 +45,7 @@ interface AppStore {
 
 export const useStore = create<AppStore>()(
   immer((set, get) => ({
-    courts: Array.from({ length: 8 }, (_, i) => emptyCourtState(i + 1)),
+    courts: Array.from({ length: 14 }, (_, i) => emptyCourtState(i + 1)),
     activeCourt: null,
     courtCount: 4,
     weather: null,

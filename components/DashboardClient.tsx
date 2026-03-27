@@ -29,7 +29,7 @@ export default function DashboardClient({ coachId }: Props) {
         <div className="flex items-center gap-3">
           {weather && <WeatherWidget weather={weather} compact />}
           <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
-            {[1,2,3,4,5,6,7,8].map(n => (
+            {[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(n => (
               <button
                 key={n}
                 onClick={() => setCourtCount(n)}

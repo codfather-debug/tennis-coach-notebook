@@ -26,7 +26,7 @@ create table players (
 create table matches (
   id uuid primary key default uuid_generate_v4(),
   coach_id uuid references coaches(id) on delete cascade not null,
-  court_number int not null check (court_number between 1 and 8),
+  court_number int not null check (court_number between 1 and 14),
   player_id uuid references players(id) on delete set null,
   player_name text not null,
   opponent_name text not null,

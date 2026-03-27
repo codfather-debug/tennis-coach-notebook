@@ -166,7 +166,7 @@ export default function HistoryClient({ matches: initialMatches }: Props) {
 
         {/* Match detail — full screen on mobile, panel on desktop */}
         <div className={clsx(
-          'flex-1 overflow-y-auto p-6',
+          'flex-1 overflow-y-auto p-3 sm:p-6 min-w-0',
           showDetail ? 'block' : 'hidden lg:block'
         )}>
           {selected ? (
@@ -252,12 +252,12 @@ function MatchDetail({ match }: { match: MatchRow }) {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6 w-full min-w-0">
       <div>
-        <div className="flex items-center gap-3 mb-1">
-          <h2 className="text-white font-bold text-xl">{match.player_name}</h2>
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <h2 className="text-white font-bold text-xl truncate">{match.player_name}</h2>
           <span className={clsx(
-            'text-sm font-bold px-2 py-0.5 rounded',
+            'text-sm font-bold px-2 py-0.5 rounded flex-shrink-0',
             result === 'win' ? 'bg-green-900/50 text-green-400' :
             result === 'loss' ? 'bg-red-900/50 text-red-400' : 'bg-gray-800 text-gray-400'
           )}>
@@ -265,7 +265,7 @@ function MatchDetail({ match }: { match: MatchRow }) {
           </span>
           <button
             onClick={handleExport}
-            className="ml-auto text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition"
+            className="ml-auto text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition flex-shrink-0"
           >
             {copied ? '✓ Copied' : '↗ Export'}
           </button>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#16a34a"/>
+  <!-- Tennis ball base (yellow-green) -->
+  <circle cx="256" cy="256" r="160" fill="#ccff00"/>
+  <!-- Tennis ball seam curves -->
+  <path d="M256 96 C200 96, 140 140, 120 200 C100 260, 120 320, 160 360 C200 400, 256 416, 256 416" fill="none" stroke="white" stroke-width="18" stroke-linecap="round"/>
+  <path d="M256 416 C312 416, 372 372, 392 312 C412 252, 392 192, 352 152 C312 112, 256 96, 256 96" fill="none" stroke="white" stroke-width="18" stroke-linecap="round"/>
+</svg>

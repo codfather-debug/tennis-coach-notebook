@@ -6,13 +6,16 @@ interface Props {
   compact?: boolean
 }
 
+function toF(c: number) { return Math.round(c * 9 / 5 + 32) }
+function toMph(kmh: number) { return Math.round(kmh * 0.621371) }
+
 export default function WeatherWidget({ weather, compact }: Props) {
   if (compact) {
     return (
       <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-800/50 px-2.5 py-1.5 rounded-lg">
         <span>{weather.icon}</span>
-        <span className="font-medium text-gray-300">{weather.temp}°</span>
-        <span>{weather.windSpeed}km/h</span>
+        <span className="font-medium text-gray-300">{toF(weather.temp)}°F</span>
+        <span>{toMph(weather.windSpeed)}mph</span>
       </div>
     )
   }
@@ -22,14 +25,14 @@ export default function WeatherWidget({ weather, compact }: Props) {
       <div className="flex items-center gap-2">
         <span className="text-2xl">{weather.icon}</span>
         <div>
-          <p className="text-white font-semibold">{weather.temp}°C</p>
+          <p className="text-white font-semibold">{toF(weather.temp)}°F</p>
           <p className="text-gray-500 text-xs">{weather.condition}</p>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2 text-xs">
-        <Stat label="Feels Like" value={`${weather.feelsLike}°`} />
+        <Stat label="Feels Like" value={`${toF(weather.feelsLike)}°F`} />
         <Stat label="Humidity" value={`${weather.humidity}%`} />
-        <Stat label="Wind" value={`${weather.windSpeed} km/h`} />
+        <Stat label="Wind" value={`${toMph(weather.windSpeed)} mph`} />
       </div>
     </div>
   )

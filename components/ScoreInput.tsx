@@ -61,7 +61,12 @@ export default function ScoreInput({ courtNumber }: Props) {
         return (
           <div key={i} className="space-y-3 pb-4 border-b border-gray-800/50 last:border-0">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Set {i + 1}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Set {i + 1}</span>
+                {!isFinished && i === court.sets.length - 1 && (
+                  <span className="text-xs bg-green-700/40 text-green-300 px-2 py-0.5 rounded-full font-medium">Current</span>
+                )}
+              </div>
               {!locked && (
                 <button
                   onClick={() => removeSet(courtNumber, i)}

@@ -9,7 +9,7 @@ interface Props { courtNumber: number }
 type Side = 'serving' | 'returning' | null
 
 export default function NoteInput({ courtNumber }: Props) {
-  const { addNote, courts } = useStore()
+  const { addNote, courts, updateSet, addSet } = useStore()
   const court = courts[courtNumber - 1]
   const [content, setContent] = useState('')
   const [selectedTags, setSelectedTags] = useState<NoteTag[]>([])
@@ -23,6 +23,22 @@ export default function NoteInput({ courtNumber }: Props) {
   const recognitionRef = useRef<any>(null)
 
   const hasLiveScore = livePlayer !== null && liveOpponent !== null
+
+  // Sync live score to the score card (current set)
+  useEffect(() => {
+    if (livePlayer === null || liveOpponent === null) return
+    const sets = courts[courtNumber - 1].sets
+    if (sets.length === 0) {
+      addSet(courtNumber)
+      // addSet is synchronous in state; index 0 will exist after this
+      updateSet(courtNumber, 0, 'player', livePlayer)
+      updateSet(courtNumber, 0, 'opponent', liveOpponent)
+    } else {
+      const idx = sets.length - 1
+      updateSet(courtNumber, idx, 'player', livePlayer)
+      updateSet(courtNumber, idx, 'opponent', liveOpponent)
+    }
+  }, [livePlayer, liveOpponent])
 
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -63,14 +79,14 @@ export default function NoteInput({ courtNumber }: Props) {
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault()
     const trimmed = content.trim()
-    if (!trimmed) return
+    if (!trimmed && !selectedTags.length) return
     if (listening) { recognitionRef.current?.stop(); setListening(false) }
 
     const contextParts: string[] = []
     if (hasLiveScore) contextParts.push(`${livePlayer}–${liveOpponent}`)
     if (side) contextParts.push(side === 'serving' ? 'Serving' : 'Returning')
     const finalContent = contextParts.length
-      ? `[${contextParts.join(' · ')}] ${trimmed}`
+      ? trimmed ? `[${contextParts.join(' · ')}] ${trimmed}` : `[${contextParts.join(' · ')}]`
       : trimmed
 
     setSaving(true)
@@ -228,7 +244,7 @@ export default function NoteInput({ courtNumber }: Props) {
           )}
           <button
             type="submit"
-            disabled={!content.trim() || saving}
+            disabled={(!content.trim() && !selectedTags.length) || saving}
             className="bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition"
           >
             {saving ? '...' : 'Save'}

@@ -11,13 +11,16 @@ import clsx from 'clsx'
 interface Props { courtNumber: number }
 
 export default function CourtDetail({ courtNumber }: Props) {
-  const { courts, endMatch, clearCourt, deleteMatch } = useStore()
+  const { courts, endMatch, clearCourt, deleteMatch, renamePlayer } = useStore()
   const court = courts[courtNumber - 1]
   const [tab, setTab] = useState<'notes' | 'score'>('notes')
   const [confirmEnd, setConfirmEnd] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [summary, setSummary] = useState<string | null>(null)
   const [generatingSummary, setGeneratingSummary] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [nameValue, setNameValue] = useState('')
+  const [copied, setCopied] = useState(false)
 
   async function handleGenerateSummary() {
     setGeneratingSummary(true)
@@ -37,6 +40,38 @@ export default function CourtDetail({ courtNumber }: Props) {
     setGeneratingSummary(false)
   }
 
+  async function handleExport() {
+    const lines: string[] = []
+    lines.push(`MATCH REPORT`)
+    lines.push(`${court.playerName} vs ${court.opponentName}`)
+    if (court.startedAt) lines.push(`Started: ${new Date(court.startedAt).toLocaleString()}`)
+    lines.push(``)
+    lines.push(`SCORE`)
+    if (court.sets.length) {
+      lines.push(court.sets.map((s, i) => {
+        const tb = s.tiebreak ? ` (${s.tiebreak.player}–${s.tiebreak.opponent})` : ''
+        return `Set ${i + 1}: ${s.player}–${s.opponent}${tb}`
+      }).join('  '))
+    } else {
+      lines.push('No score recorded')
+    }
+    lines.push(``)
+    lines.push(`NOTES (${court.notes.length})`)
+    const sorted = [...court.notes].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    for (const n of sorted) {
+      const tags = n.tags.length ? ` [${n.tags.join(', ')}]` : ''
+      lines.push(`${new Date(n.timestamp).toLocaleTimeString()}${tags}: ${n.content}`)
+    }
+    if (summary) {
+      lines.push(``)
+      lines.push(`AI SUMMARY`)
+      lines.push(summary)
+    }
+    await navigator.clipboard.writeText(lines.join('\n'))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   if (court.status === 'empty') return <MatchSetup courtNumber={courtNumber} />
 
   return (
@@ -45,7 +80,29 @@ export default function CourtDetail({ courtNumber }: Props) {
       <div className="px-5 py-4 border-b border-gray-800 flex-shrink-0">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-white font-bold text-lg leading-tight">{court.playerName}</h2>
+            {editingName ? (
+              <input
+                autoFocus
+                value={nameValue}
+                onChange={e => setNameValue(e.target.value)}
+                onBlur={() => { renamePlayer(courtNumber, nameValue); setEditingName(false) }}
+                onKeyDown={e => { if (e.key === 'Enter') { renamePlayer(courtNumber, nameValue); setEditingName(false) } if (e.key === 'Escape') setEditingName(false) }}
+                className="bg-gray-800 text-white font-bold text-lg rounded-lg px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-green-500 w-48"
+              />
+            ) : (
+              <div className="flex items-center gap-1">
+                <h2 className="text-white font-bold text-lg leading-tight">{court.playerName}</h2>
+                {court.status === 'active' && (
+                  <button
+                    onClick={() => { setNameValue(court.playerName); setEditingName(true) }}
+                    className="text-gray-600 hover:text-gray-400 transition text-sm"
+                    title="Rename player"
+                  >
+                    ✏️
+                  </button>
+                )}
+              </div>
+            )}
             <p className="text-gray-400 text-sm">vs {court.opponentName}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -159,7 +216,7 @@ export default function CourtDetail({ courtNumber }: Props) {
       </div>
 
       {court.status === 'finished' && (
-        <div className="px-5 py-4 border-t border-gray-800 flex-shrink-0">
+        <div className="px-5 py-4 border-t border-gray-800 flex-shrink-0 space-y-2">
           <button
             onClick={handleGenerateSummary}
             disabled={generatingSummary}
@@ -168,10 +225,16 @@ export default function CourtDetail({ courtNumber }: Props) {
             {generatingSummary ? 'Generating summary...' : '✦ Generate AI Summary'}
           </button>
           {summary && (
-            <div className="mt-3 bg-purple-950/30 border border-purple-800/40 rounded-xl p-4">
+            <div className="bg-purple-950/30 border border-purple-800/40 rounded-xl p-4">
               <p className="text-purple-200 text-sm leading-relaxed">{summary}</p>
             </div>
           )}
+          <button
+            onClick={handleExport}
+            className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-semibold rounded-xl px-4 py-2.5 transition"
+          >
+            {copied ? '✓ Copied to clipboard' : '↗ Export Notes'}
+          </button>
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import type { SetScore, Note, WeatherSnapshot } from '@/types'
 import { NOTE_TAGS } from '@/types'
 import { format } from 'date-fns'
@@ -32,9 +32,8 @@ function computeResult(sets: SetScore[]): 'win' | 'loss' | 'unknown' {
 
 export default function HistoryClient({ matches: initialMatches }: Props) {
   const [matches, setMatches] = useState(initialMatches)
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialMatches[0]?.id ?? null
-  )
+  const [selectedId, setSelectedId] = useState<string | null>(initialMatches[0]?.id ?? null)
+  const [search, setSearch] = useState('')
   const selected = matches.find(m => m.id === selectedId)
 
   async function handleDelete(id: string) {
@@ -45,6 +44,27 @@ export default function HistoryClient({ matches: initialMatches }: Props) {
     if (selectedId === id) setSelectedId(remaining[0]?.id ?? null)
   }
 
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim()
+    if (!q) return matches
+    return matches.filter(m =>
+      m.player_name.toLowerCase().includes(q) ||
+      m.opponent_name.toLowerCase().includes(q)
+    )
+  }, [matches, search])
+
+  // Group by date
+  const grouped = useMemo(() => {
+    const groups: { date: string; matches: MatchRow[] }[] = []
+    for (const m of filtered) {
+      const date = m.ended_at ? format(new Date(m.ended_at), 'yyyy-MM-dd') : 'Unknown'
+      const existing = groups.find(g => g.date === date)
+      if (existing) existing.matches.push(m)
+      else groups.push({ date, matches: [m] })
+    }
+    return groups
+  }, [filtered])
+
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
       <header className="flex items-center gap-3 px-4 py-3 border-b border-gray-800 bg-gray-900/50 backdrop-blur">
@@ -54,52 +74,69 @@ export default function HistoryClient({ matches: initialMatches }: Props) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Match list */}
-        <div className="w-72 border-r border-gray-800 overflow-y-auto flex-shrink-0">
-          {matches.length === 0 && (
-            <p className="text-gray-600 text-sm text-center p-8">No finished matches yet</p>
+        <div className="w-72 border-r border-gray-800 overflow-y-auto flex-shrink-0 flex flex-col">
+          {/* Search */}
+          <div className="p-3 border-b border-gray-800 flex-shrink-0">
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search player..."
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition"
+            />
+          </div>
+
+          {filtered.length === 0 && (
+            <p className="text-gray-600 text-sm text-center p-8">
+              {search ? 'No matches found' : 'No finished matches yet'}
+            </p>
           )}
-          {matches.map(m => {
-            const result = computeResult(m.sets)
-            return (
-              <div
-                key={m.id}
-                className={clsx(
-                  'relative border-b border-gray-800/50 group',
-                  selectedId === m.id && 'bg-gray-900 border-l-2 border-l-green-500'
-                )}
-              >
-                <button
-                  onClick={() => setSelectedId(m.id)}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-900/50 transition"
-                >
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs text-gray-500">Court {m.court_number}</span>
-                    <span className={clsx(
-                      'text-xs font-bold',
-                      result === 'win' ? 'text-green-400' : result === 'loss' ? 'text-red-400' : 'text-gray-500'
-                    )}>
-                      {result === 'win' ? 'W' : result === 'loss' ? 'L' : '—'}
-                    </span>
-                  </div>
-                  <p className="text-white text-sm font-medium truncate">{m.player_name}</p>
-                  <p className="text-gray-500 text-xs truncate">vs {m.opponent_name}</p>
-                  <p className="text-gray-500 text-xs mt-1">
-                    {m.sets.map(s => `${s.player}–${s.opponent}`).join('  ')}
-                  </p>
-                  <p className="text-gray-600 text-xs mt-1">
-                    {format(new Date(m.ended_at), 'MMM d, yyyy')}
-                  </p>
-                </button>
-                <button
-                  onClick={() => handleDelete(m.id)}
-                  className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition p-1 rounded"
-                  title="Delete match"
-                >
-                  🗑
-                </button>
+
+          {grouped.map(group => (
+            <div key={group.date}>
+              <div className="px-4 py-2 bg-gray-900/80 text-xs text-gray-500 font-semibold uppercase tracking-wider sticky top-0 z-10">
+                {group.date !== 'Unknown' ? format(new Date(group.date), 'MMM d, yyyy') : 'Unknown date'}
               </div>
-            )
-          })}
+              {group.matches.map(m => {
+                const result = computeResult(m.sets)
+                return (
+                  <div
+                    key={m.id}
+                    className={clsx(
+                      'relative border-b border-gray-800/50 group',
+                      selectedId === m.id && 'bg-gray-900 border-l-2 border-l-green-500'
+                    )}
+                  >
+                    <button
+                      onClick={() => setSelectedId(m.id)}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-900/50 transition"
+                    >
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs text-gray-500">Court {m.court_number}</span>
+                        <span className={clsx(
+                          'text-xs font-bold',
+                          result === 'win' ? 'text-green-400' : result === 'loss' ? 'text-red-400' : 'text-gray-500'
+                        )}>
+                          {result === 'win' ? 'W' : result === 'loss' ? 'L' : '—'}
+                        </span>
+                      </div>
+                      <p className="text-white text-sm font-medium truncate">{m.player_name}</p>
+                      <p className="text-gray-500 text-xs truncate">vs {m.opponent_name}</p>
+                      <p className="text-gray-500 text-xs mt-1 font-mono">
+                        {m.sets.map(s => `${s.player}–${s.opponent}${s.tiebreak ? ` (${s.tiebreak.player}–${s.tiebreak.opponent})` : ''}`).join('  ')}
+                      </p>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(m.id)}
+                      className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition p-1 rounded"
+                      title="Delete match"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          ))}
         </div>
 
         {/* Match detail */}
@@ -119,6 +156,7 @@ function MatchDetail({ match }: { match: MatchRow }) {
   const result = computeResult(match.sets)
   const [summary, setSummary] = useState<string | null>(null)
   const [generatingSummary, setGeneratingSummary] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   async function handleGenerateSummary() {
     setGeneratingSummary(true)
@@ -138,6 +176,38 @@ function MatchDetail({ match }: { match: MatchRow }) {
     setGeneratingSummary(false)
   }
 
+  async function handleExport() {
+    const lines: string[] = []
+    lines.push(`MATCH REPORT`)
+    lines.push(`${match.player_name} vs ${match.opponent_name}`)
+    lines.push(`Court ${match.court_number} · ${format(new Date(match.started_at), 'PPp')}`)
+    lines.push(``)
+    lines.push(`SCORE`)
+    if (match.sets.length) {
+      lines.push(match.sets.map((s, i) => {
+        const tb = s.tiebreak ? ` (${s.tiebreak.player}–${s.tiebreak.opponent})` : ''
+        return `Set ${i + 1}: ${s.player}–${s.opponent}${tb}`
+      }).join('  '))
+    } else {
+      lines.push('No score recorded')
+    }
+    lines.push(``)
+    lines.push(`NOTES (${match.notes.length})`)
+    const sorted = [...match.notes].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    for (const n of sorted) {
+      const tags = n.tags.length ? ` [${n.tags.join(', ')}]` : ''
+      lines.push(`${format(new Date(n.timestamp), 'h:mm a')}${tags}: ${n.content}`)
+    }
+    if (summary) {
+      lines.push(``)
+      lines.push(`AI SUMMARY`)
+      lines.push(summary)
+    }
+    await navigator.clipboard.writeText(lines.join('\n'))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
     <div className="max-w-2xl space-y-6">
       <div>
@@ -150,6 +220,12 @@ function MatchDetail({ match }: { match: MatchRow }) {
           )}>
             {result === 'win' ? 'WIN' : result === 'loss' ? 'LOSS' : '—'}
           </span>
+          <button
+            onClick={handleExport}
+            className="ml-auto text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition"
+          >
+            {copied ? '✓ Copied' : '↗ Export'}
+          </button>
         </div>
         <p className="text-gray-400">vs {match.opponent_name} · Court {match.court_number}</p>
         <p className="text-gray-500 text-sm mt-1">
@@ -164,13 +240,18 @@ function MatchDetail({ match }: { match: MatchRow }) {
         {match.sets.length === 0 ? (
           <p className="text-gray-600 text-sm">No score recorded</p>
         ) : (
-          <div className="flex gap-4">
+          <div className="flex gap-4 flex-wrap">
             {match.sets.map((set, i) => (
               <div key={i} className="text-center">
                 <p className="text-gray-500 text-xs mb-1">Set {i + 1}</p>
                 <p className="text-white font-bold text-xl tabular-nums">
                   {set.player}–{set.opponent}
                 </p>
+                {set.tiebreak && (
+                  <p className="text-yellow-500 text-xs mt-0.5">
+                    ({set.tiebreak.player}–{set.tiebreak.opponent})
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -194,7 +275,7 @@ function MatchDetail({ match }: { match: MatchRow }) {
           <p className="text-gray-600 text-sm">No notes for this match</p>
         ) : (
           <div className="space-y-3">
-            {match.notes
+            {[...match.notes]
               .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
               .map(note => (
                 <div key={note.id} className="bg-gray-900/60 border border-gray-800 rounded-xl p-3">
@@ -224,7 +305,7 @@ function MatchDetail({ match }: { match: MatchRow }) {
       </div>
 
       {/* AI Summary */}
-      <div className="pt-2">
+      <div className="pt-2 space-y-3">
         <button
           onClick={handleGenerateSummary}
           disabled={generatingSummary}
@@ -233,7 +314,7 @@ function MatchDetail({ match }: { match: MatchRow }) {
           {generatingSummary ? 'Generating summary...' : '✦ Generate AI Summary'}
         </button>
         {summary && (
-          <div className="mt-3 bg-purple-950/30 border border-purple-800/40 rounded-xl p-4">
+          <div className="bg-purple-950/30 border border-purple-800/40 rounded-xl p-4">
             <p className="text-purple-200 text-sm leading-relaxed">{summary}</p>
           </div>
         )}

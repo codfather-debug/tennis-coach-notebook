@@ -19,10 +19,12 @@ export default function CourtGrid() {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3">
-        {Array.from({ length: courtCount }, (_, i) => (
-          <CourtCard key={i + 1} courtNumber={i + 1} />
-        ))}
+      <div className="overflow-y-auto max-h-[calc(100vh-120px)] lg:max-h-none">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3">
+          {Array.from({ length: courtCount }, (_, i) => (
+            <CourtCard key={i + 1} courtNumber={i + 1} />
+          ))}
+        </div>
       </div>
 
       {activeCourt && courtCount > 1 && (

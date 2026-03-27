@@ -1,6 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
+import { getRoster, addToRoster } from '@/lib/roster'
 
 interface Props { courtNumber: number }
 
@@ -9,11 +10,15 @@ export default function MatchSetup({ courtNumber }: Props) {
   const [playerName, setPlayerName] = useState('')
   const [opponentName, setOpponentName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [roster, setRoster] = useState<string[]>([])
+
+  useEffect(() => setRoster(getRoster()), [])
 
   async function handleStart(e: React.FormEvent) {
     e.preventDefault()
     if (!playerName.trim() || !opponentName.trim()) return
     setLoading(true)
+    addToRoster(playerName.trim())
     await setupCourt(courtNumber, playerName.trim(), opponentName.trim())
     setLoading(false)
   }
@@ -30,8 +35,12 @@ export default function MatchSetup({ courtNumber }: Props) {
             placeholder="Your player"
             required
             autoFocus
+            list="player-roster"
             className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition text-sm"
           />
+          <datalist id="player-roster">
+            {roster.map(n => <option key={n} value={n} />)}
+          </datalist>
           <input
             value={opponentName}
             onChange={(e) => setOpponentName(e.target.value)}

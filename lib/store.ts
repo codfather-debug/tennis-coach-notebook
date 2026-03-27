@@ -43,6 +43,7 @@ interface AppStore {
   deleteMatch: (courtNumber: number) => Promise<void>
   clearCourt: (courtNumber: number) => void
   loadActiveMatches: () => Promise<void>
+  renamePlayer: (courtNumber: number, name: string) => void
 }
 
 export const useStore = create<AppStore>()(
@@ -203,6 +204,16 @@ export const useStore = create<AppStore>()(
 
     clearCourt: (courtNumber) => {
       set((s) => { s.courts[courtNumber - 1] = emptyCourtState(courtNumber) })
+    },
+
+    renamePlayer: (courtNumber, name) => {
+      const trimmed = name.trim()
+      if (!trimmed) return
+      set((s) => { s.courts[courtNumber - 1].playerName = trimmed })
+      const court = get().courts[courtNumber - 1]
+      if (!court.matchId) return
+      const supabase = createClient()
+      supabase.from('matches').update({ player_name: trimmed }).eq('id', court.matchId)
     },
 
     loadActiveMatches: async () => {

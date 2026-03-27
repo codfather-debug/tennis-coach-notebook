@@ -1,5 +1,5 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '@/lib/store'
 import CourtGrid from './CourtGrid'
 import CourtDetail from './CourtDetail'
@@ -11,11 +11,13 @@ interface Props { coachId: string }
 
 export default function DashboardClient({ coachId }: Props) {
   const { setCoachId, loadActiveMatches, loadWeather, activeCourt, weather, courtCount, setCourtCount } = useStore()
+  const [loading, setLoading] = useState(true)
+  const [weatherAttempted, setWeatherAttempted] = useState(false)
 
   useEffect(() => {
     setCoachId(coachId)
-    loadActiveMatches()
-    loadWeather()
+    loadActiveMatches().then(() => setLoading(false))
+    loadWeather().then(() => setWeatherAttempted(true))
   }, [coachId])
 
   return (
@@ -27,7 +29,11 @@ export default function DashboardClient({ coachId }: Props) {
           <span className="font-bold text-white text-sm tracking-wide">Coach Notebook</span>
         </div>
         <div className="flex items-center gap-3">
-          {weather && <WeatherWidget weather={weather} compact />}
+          {weather ? (
+            <WeatherWidget weather={weather} compact />
+          ) : weatherAttempted ? (
+            <span className="text-xs text-gray-600">📍 Location unavailable</span>
+          ) : null}
           <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
             {[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(n => (
               <button
@@ -57,7 +63,15 @@ export default function DashboardClient({ coachId }: Props) {
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Court Grid */}
         <div className="lg:w-auto lg:min-w-[520px] p-4">
-          <CourtGrid />
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3">
+              {Array.from({ length: courtCount }, (_, i) => (
+                <div key={i} className="h-24 rounded-xl bg-gray-800/50 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <CourtGrid />
+          )}
         </div>
 
         {/* Detail Panel */}

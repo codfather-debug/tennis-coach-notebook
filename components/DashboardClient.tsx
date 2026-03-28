@@ -103,10 +103,11 @@ export default function DashboardClient({ coachId }: Props) {
   const {
     setCoachId, loadActiveMatches, loadWeather,
     activeCourt, setActiveCourt, weather, courtCount, setCourtCount,
-    activeMeetId, activeMeetName, createMeet, endMeet,
+    activeMeetId, activeMeetName, createMeet, endMeet, deleteMeet,
   } = useStore()
   const [loading, setLoading] = useState(true)
   const [weatherAttempted, setWeatherAttempted] = useState(false)
+  const [confirmDeleteMeet, setConfirmDeleteMeet] = useState(false)
 
   useEffect(() => {
     setCoachId(coachId)
@@ -182,12 +183,38 @@ export default function DashboardClient({ coachId }: Props) {
           <div className="flex items-center gap-2 px-4 pb-3 border-t border-gray-800/50 pt-2">
             <span className="text-xs text-yellow-400">📋</span>
             <span className="text-xs font-semibold text-yellow-300 truncate">{activeMeetName}</span>
-            <button
-              onClick={endMeet}
-              className="ml-auto text-xs text-gray-500 hover:text-white transition px-2 py-1 rounded hover:bg-gray-800"
-            >
-              End Meet
-            </button>
+            {confirmDeleteMeet ? (
+              <div className="ml-auto flex gap-1">
+                <button
+                  onClick={async () => { await deleteMeet(activeMeetId); setConfirmDeleteMeet(false) }}
+                  className="text-xs bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded transition"
+                >
+                  Delete?
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteMeet(false)}
+                  className="text-xs text-gray-500 hover:text-white px-2 py-1 rounded hover:bg-gray-800 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="ml-auto flex gap-1">
+                <button
+                  onClick={endMeet}
+                  className="text-xs text-gray-500 hover:text-white transition px-2 py-1 rounded hover:bg-gray-800"
+                >
+                  End Meet
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteMeet(true)}
+                  className="text-xs text-gray-600 hover:text-red-400 transition px-2 py-1 rounded hover:bg-gray-800"
+                  title="Delete meet"
+                >
+                  🗑
+                </button>
+              </div>
+            )}
           </div>
         )}
       </header>
@@ -217,16 +244,6 @@ export default function DashboardClient({ coachId }: Props) {
           )}
         </div>
 
-        {/* Mobile: court cards strip at bottom — only show when a meet is active */}
-        {activeMeetId && (
-          <div className="lg:hidden flex-shrink-0 border-t border-gray-800 bg-gray-900/50 p-2 overflow-x-auto">
-            <div className="flex gap-2" style={{ width: 'max-content' }}>
-              {Array.from({ length: courtCount }, (_, i) => (
-                <CourtCard key={i + 1} courtNumber={i + 1} mini />
-              ))}
-            </div>
-          </div>
-        )}
       </main>
     </div>
   )

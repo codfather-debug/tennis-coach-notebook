@@ -43,11 +43,13 @@ function computeResult(sets: SetScore[]): 'win' | 'loss' | 'unknown' {
   return 'unknown'
 }
 
-export default function HistoryClient({ matches: initialMatches, meets }: Props) {
+export default function HistoryClient({ matches: initialMatches, meets: initialMeets }: Props) {
   const [matches, setMatches] = useState(initialMatches)
+  const [meetList, setMeetList] = useState(initialMeets)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [expandedMeets, setExpandedMeets] = useState<Set<string>>(new Set())
+  const [confirmDeleteMeetId, setConfirmDeleteMeetId] = useState<string | null>(null)
   const selected = matches.find(m => m.id === selectedId)
   const showDetail = !!selectedId
 
@@ -57,6 +59,16 @@ export default function HistoryClient({ matches: initialMatches, meets }: Props)
     const remaining = matches.filter(m => m.id !== id)
     setMatches(remaining)
     if (selectedId === id) setSelectedId(null)
+  }
+
+  async function handleDeleteMeet(id: string) {
+    await fetch('/api/meets', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setMeetList(prev => prev.filter(m => m.id !== id))
+    setConfirmDeleteMeetId(null)
   }
 
   function toggleMeet(meetId: string) {
@@ -82,12 +94,12 @@ export default function HistoryClient({ matches: initialMatches, meets }: Props)
   // Matches grouped by meet
   const meetMatches = useMemo(() => {
     const result: { meet: MeetRow; matches: MatchRow[] }[] = []
-    for (const meet of meets) {
+    for (const meet of meetList) {
       const ms = filtered.filter(m => m.meet_id === meet.id)
       if (ms.length) result.push({ meet, matches: ms })
     }
     return result
-  }, [filtered, meets])
+  }, [filtered, meetList])
 
   // Standalone matches (no meet)
   const standaloneMatches = useMemo(() => filtered.filter(m => !m.meet_id), [filtered])
@@ -199,16 +211,42 @@ export default function HistoryClient({ matches: initialMatches, meets }: Props)
             const meetDate = format(new Date(meet.created_at), 'MMM d, yyyy')
             return (
               <div key={meet.id}>
-                <button
-                  onClick={() => toggleMeet(meet.id)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 bg-yellow-950/30 border-b border-yellow-800/30 hover:bg-yellow-950/50 transition"
-                >
-                  <div className="text-left">
-                    <p className="text-yellow-300 text-xs font-bold">📋 {meet.name}</p>
-                    <p className="text-yellow-600 text-xs">{meetDate} · {meetMs.length} court{meetMs.length !== 1 ? 's' : ''}</p>
-                  </div>
-                  <span className="text-yellow-600 text-xs">{isExpanded ? '▲' : '▼'}</span>
-                </button>
+                <div className="flex items-center bg-yellow-950/30 border-b border-yellow-800/30">
+                  <button
+                    onClick={() => toggleMeet(meet.id)}
+                    className="flex-1 flex items-center justify-between px-4 py-2.5 hover:bg-yellow-950/50 transition"
+                  >
+                    <div className="text-left">
+                      <p className="text-yellow-300 text-xs font-bold">📋 {meet.name}</p>
+                      <p className="text-yellow-600 text-xs">{meetDate} · {meetMs.length} court{meetMs.length !== 1 ? 's' : ''}</p>
+                    </div>
+                    <span className="text-yellow-600 text-xs mr-2">{isExpanded ? '▲' : '▼'}</span>
+                  </button>
+                  {confirmDeleteMeetId === meet.id ? (
+                    <div className="flex gap-1 pr-2">
+                      <button
+                        onClick={() => handleDeleteMeet(meet.id)}
+                        className="text-xs bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded transition"
+                      >
+                        Delete?
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteMeetId(null)}
+                        className="text-xs text-gray-500 hover:text-white px-2 py-1 rounded hover:bg-gray-800 transition"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteMeetId(meet.id)}
+                      className="text-gray-600 hover:text-red-400 transition pr-3 text-sm"
+                      title="Delete meet"
+                    >
+                      🗑
+                    </button>
+                  )}
+                </div>
                 {isExpanded && meetMs.map(m => <MatchItem key={m.id} m={m} />)}
               </div>
             )

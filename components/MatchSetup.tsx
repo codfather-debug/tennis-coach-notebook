@@ -69,14 +69,8 @@ export default function MatchSetup({ courtNumber }: Props) {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto bg-gray-950">
-      {/* Court header */}
-      <div className="flex-shrink-0 px-6 pt-8 pb-4 text-center">
-        <p className="text-green-400 text-sm font-bold uppercase tracking-widest mb-1">Court {courtNumber}</p>
-        <h2 className="text-white text-3xl font-black">New Match</h2>
-      </div>
-
       {/* Singles / Doubles toggle */}
-      <div className="flex-shrink-0 flex gap-1 mx-6 mb-6 bg-gray-900 p-1 rounded-xl">
+      <div className="flex-shrink-0 flex gap-1 mx-6 mt-6 mb-6 bg-gray-900 p-1 rounded-xl">
         {(['singles', 'doubles'] as MatchType[]).map(t => (
           <button
             key={t}

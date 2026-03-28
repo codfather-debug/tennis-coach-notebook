@@ -10,6 +10,78 @@ import clsx from 'clsx'
 
 interface Props { coachId: string }
 
+function HomeScreen() {
+  const { createMeet, setCourtCount, setActiveCourt } = useStore()
+  const [meetName, setMeetName] = useState('')
+  const [localCourtCount, setLocalCourtCount] = useState(4)
+  const [loading, setLoading] = useState(false)
+
+  async function handleStart(e: React.FormEvent) {
+    e.preventDefault()
+    if (!meetName.trim()) return
+    setLoading(true)
+    setCourtCount(localCourtCount)
+    await createMeet(meetName.trim())
+    setActiveCourt(1)
+    setLoading(false)
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full px-6 bg-gray-950 overflow-y-auto">
+      <div className="w-full max-w-sm py-8">
+        <div className="text-center mb-8">
+          <div className="text-5xl mb-3">🎾</div>
+          <h1 className="text-white font-black text-3xl mb-1">Coach Notebook</h1>
+          <p className="text-gray-500 text-sm">Ready to track your courts</p>
+        </div>
+
+        <form onSubmit={handleStart} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Name this meet</label>
+            <input
+              autoFocus
+              value={meetName}
+              onChange={e => setMeetName(e.target.value)}
+              placeholder="e.g. JV vs Eastside, Tuesday Practice"
+              required
+              className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-xs text-gray-500 uppercase tracking-wider font-semibold">How many courts?</label>
+            <div className="grid grid-cols-7 gap-2">
+              {Array.from({ length: 14 }, (_, i) => i + 1).map(n => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setLocalCourtCount(n)}
+                  className={clsx(
+                    'h-10 rounded-xl text-sm font-bold transition',
+                    localCourtCount === n
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                  )}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={!meetName.trim() || loading}
+            className="w-full bg-green-600 hover:bg-green-500 active:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black rounded-2xl px-4 py-6 transition text-xl shadow-lg shadow-green-900/40"
+          >
+            {loading ? 'Starting...' : '▶ Start Meet'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardClient({ coachId }: Props) {
   const {
     setCoachId, loadActiveMatches, loadWeather,
@@ -18,25 +90,17 @@ export default function DashboardClient({ coachId }: Props) {
   } = useStore()
   const [loading, setLoading] = useState(true)
   const [weatherAttempted, setWeatherAttempted] = useState(false)
-  const [showMeetModal, setShowMeetModal] = useState(false)
-  const [meetNameInput, setMeetNameInput] = useState('')
 
   useEffect(() => {
     setCoachId(coachId)
     loadActiveMatches().then(() => {
       setLoading(false)
-      setActiveCourt(1)
+      // Only auto-select if returning to active courts
+      const { courts } = useStore.getState()
+      if (courts.some(c => c.status === 'active')) setActiveCourt(1)
     })
     loadWeather().then(() => setWeatherAttempted(true))
   }, [coachId])
-
-  async function handleCreateMeet(e: React.FormEvent) {
-    e.preventDefault()
-    if (!meetNameInput.trim()) return
-    await createMeet(meetNameInput.trim())
-    setMeetNameInput('')
-    setShowMeetModal(false)
-  }
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
@@ -85,65 +149,21 @@ export default function DashboardClient({ coachId }: Props) {
           </Link>
         </div>
 
-        {/* Row 3: Meet bar */}
-        <div className="flex items-center gap-2 px-4 pb-3 border-t border-gray-800/50 pt-2">
-          {activeMeetId ? (
-            <>
-              <span className="text-xs text-yellow-400">📋</span>
-              <span className="text-xs font-semibold text-yellow-300 truncate">{activeMeetName}</span>
-              <button
-                onClick={endMeet}
-                className="ml-auto text-xs text-gray-500 hover:text-white transition px-2 py-1 rounded hover:bg-gray-800"
-              >
-                End Meet
-              </button>
-            </>
-          ) : (
+        {/* Row 3: Active meet bar — only shown when meet is running */}
+        {activeMeetId && (
+          <div className="flex items-center gap-2 px-4 pb-3 border-t border-gray-800/50 pt-2">
+            <span className="text-xs text-yellow-400">📋</span>
+            <span className="text-xs font-semibold text-yellow-300 truncate">{activeMeetName}</span>
             <button
-              onClick={() => setShowMeetModal(true)}
-              className="text-xs text-gray-500 hover:text-green-400 transition font-medium"
+              onClick={endMeet}
+              className="ml-auto text-xs text-gray-500 hover:text-white transition px-2 py-1 rounded hover:bg-gray-800"
             >
-              + Start Meet
+              End Meet
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </header>
 
-      {/* Meet name modal */}
-      {showMeetModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form
-            onSubmit={handleCreateMeet}
-            className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm space-y-4"
-          >
-            <h2 className="text-white font-bold text-lg">Name This Meet</h2>
-            <p className="text-gray-500 text-sm">All courts set up after this will be grouped together in history.</p>
-            <input
-              autoFocus
-              value={meetNameInput}
-              onChange={e => setMeetNameInput(e.target.value)}
-              placeholder="e.g. JV vs Eastside, Tuesday Practice"
-              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition"
-            />
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={!meetNameInput.trim()}
-                className="flex-1 bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white text-sm font-semibold rounded-xl py-2.5 transition"
-              >
-                Start Meet
-              </button>
-              <button
-                type="button"
-                onClick={() => { setShowMeetModal(false); setMeetNameInput('') }}
-                className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-xl py-2.5 transition"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* Main */}
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
@@ -165,20 +185,20 @@ export default function DashboardClient({ coachId }: Props) {
           {activeCourt ? (
             <CourtDetail courtNumber={activeCourt} />
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-600 text-sm">
-              Tap a court below to get started
-            </div>
+            <HomeScreen />
           )}
         </div>
 
-        {/* Mobile: court cards strip at bottom */}
-        <div className="lg:hidden flex-shrink-0 border-t border-gray-800 bg-gray-900/50 p-2 overflow-x-auto">
-          <div className="flex gap-2" style={{ width: 'max-content' }}>
-            {Array.from({ length: courtCount }, (_, i) => (
-              <CourtCard key={i + 1} courtNumber={i + 1} mini />
-            ))}
+        {/* Mobile: court cards strip at bottom — only show when a meet is active */}
+        {activeMeetId && (
+          <div className="lg:hidden flex-shrink-0 border-t border-gray-800 bg-gray-900/50 p-2 overflow-x-auto">
+            <div className="flex gap-2" style={{ width: 'max-content' }}>
+              {Array.from({ length: courtCount }, (_, i) => (
+                <CourtCard key={i + 1} courtNumber={i + 1} mini />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   )

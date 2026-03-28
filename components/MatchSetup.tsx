@@ -31,8 +31,8 @@ export default function MatchSetup({ courtNumber }: Props) {
 
   async function handleStart(e: React.FormEvent) {
     e.preventDefault()
-    if (!playerName.trim() || !opponentName.trim()) return
-    if (matchType === 'doubles' && (!playerName2.trim() || !opponentName2.trim())) return
+    if (!playerName.trim()) return
+    if (matchType === 'doubles' && !playerName2.trim()) return
     setLoading(true)
     await setupCourt(courtNumber, {
       playerName: playerName.trim(),
@@ -128,16 +128,14 @@ export default function MatchSetup({ courtNumber }: Props) {
             <input
               value={opponentName}
               onChange={e => setOpponentName(e.target.value)}
-              placeholder={matchType === 'doubles' ? 'Opponent 1 name' : 'Opponent name'}
-              required
+              placeholder={matchType === 'doubles' ? 'Opponent 1 name (optional)' : 'Opponent name (optional)'}
               className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition text-sm"
             />
             {matchType === 'doubles' && (
               <input
                 value={opponentName2}
                 onChange={e => setOpponentName2(e.target.value)}
-                placeholder="Opponent 2 name"
-                required
+                placeholder="Opponent 2 name (optional)"
                 className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition text-sm"
               />
             )}

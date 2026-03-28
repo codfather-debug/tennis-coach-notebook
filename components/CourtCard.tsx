@@ -11,6 +11,24 @@ const statusDot: Record<MatchStatus, string> = {
   finished: 'bg-blue-400',
 }
 
+// Per-court colors for mini strip — bg at full opacity for active, muted for inactive
+const MINI_COLORS = [
+  { active: 'bg-blue-700',    inactive: 'bg-blue-950/60' },
+  { active: 'bg-emerald-700', inactive: 'bg-emerald-950/60' },
+  { active: 'bg-purple-700',  inactive: 'bg-purple-950/60' },
+  { active: 'bg-orange-700',  inactive: 'bg-orange-950/60' },
+  { active: 'bg-pink-700',    inactive: 'bg-pink-950/60' },
+  { active: 'bg-cyan-700',    inactive: 'bg-cyan-950/60' },
+  { active: 'bg-yellow-700',  inactive: 'bg-yellow-950/60' },
+  { active: 'bg-red-700',     inactive: 'bg-red-950/60' },
+  { active: 'bg-indigo-700',  inactive: 'bg-indigo-950/60' },
+  { active: 'bg-teal-700',    inactive: 'bg-teal-950/60' },
+  { active: 'bg-lime-700',    inactive: 'bg-lime-950/60' },
+  { active: 'bg-rose-700',    inactive: 'bg-rose-950/60' },
+  { active: 'bg-violet-700',  inactive: 'bg-violet-950/60' },
+  { active: 'bg-amber-700',   inactive: 'bg-amber-950/60' },
+]
+
 function getActiveCardClass(sets: SetScore[]): string {
   if (!sets.length) return 'bg-green-950/40 border-green-800/50 hover:border-green-600'
   const wins = sets.filter(s => s.player > s.opponent).length
@@ -50,39 +68,34 @@ export default function CourtCard({ courtNumber, mini }: Props) {
   }
 
   if (mini) {
+    const color = MINI_COLORS[(courtNumber - 1) % MINI_COLORS.length]
     return (
       <button
         onClick={() => setActiveCourt(courtNumber)}
         className={clsx(
-          'relative flex-shrink-0 text-left border-r border-gray-800 p-2 transition-all overflow-hidden',
-          isActive ? 'bg-gray-800 w-24' : 'bg-gray-950 w-20 hover:bg-gray-900'
+          'relative flex-shrink-0 text-left border-r border-black/20 p-2 transition-all overflow-hidden',
+          isActive ? `${color.active} w-24` : `${color.inactive} w-20 opacity-60 hover:opacity-90`
         )}
       >
-        {/* Watermark — only on active court */}
+        {/* Watermark on active court */}
         {isActive && (
           <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[42px] font-black text-white/10 leading-none select-none pointer-events-none">
             {courtNumber}
           </div>
         )}
         <div className="flex items-center justify-between mb-1">
-          <span className={clsx('text-xs font-bold', isActive ? 'text-white' : 'text-gray-500')}>
-            {courtNumber}
-          </span>
+          <span className="text-xs font-bold text-white/80">{courtNumber}</span>
           <span className={clsx('w-1.5 h-1.5 rounded-full flex-shrink-0', statusDot[court.status])} />
         </div>
         {court.status === 'empty' ? (
-          <p className="text-gray-600 text-xs">—</p>
+          <p className="text-white/30 text-xs">—</p>
         ) : (
           <>
-            <p className={clsx('text-xs font-medium truncate', isActive ? 'text-white' : 'text-gray-400')}>
-              {court.playerName}
-            </p>
+            <p className="text-xs font-medium truncate text-white/90">{court.playerName}</p>
             {formatSets(court.sets) ? (
-              <p className={clsx('text-xs font-mono truncate', getScoreTextClass(court.sets))}>
-                {formatSets(court.sets)}
-              </p>
+              <p className="text-xs font-mono truncate text-white/70">{formatSets(court.sets)}</p>
             ) : (
-              <p className="text-gray-600 text-xs">Active</p>
+              <p className="text-white/30 text-xs">Active</p>
             )}
           </>
         )}

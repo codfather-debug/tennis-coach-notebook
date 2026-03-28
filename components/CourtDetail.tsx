@@ -48,6 +48,13 @@ export default function CourtDetail({ courtNumber }: Props) {
 
   const hasLiveScore = livePlayer !== null && liveOpponent !== null
 
+  // Reset live score state when switching courts
+  useEffect(() => {
+    setLivePlayer(null)
+    setLiveOpponent(null)
+    setSide(null)
+  }, [courtNumber])
+
   useEffect(() => {
     fetch('/api/players')
       .then(r => r.json())

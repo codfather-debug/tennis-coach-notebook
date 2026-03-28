@@ -7,7 +7,25 @@ import NoteList from './NoteList'
 import MatchSetup from './MatchSetup'
 import WeatherWidget from './WeatherWidget'
 import QuickLogPanel from './QuickLogPanel'
+import CourtCard from './CourtCard'
 import clsx from 'clsx'
+
+const COURT_COLORS = [
+  { bg: 'bg-blue-500',    text: 'text-blue-500' },
+  { bg: 'bg-emerald-500', text: 'text-emerald-500' },
+  { bg: 'bg-purple-500',  text: 'text-purple-500' },
+  { bg: 'bg-orange-500',  text: 'text-orange-500' },
+  { bg: 'bg-pink-500',    text: 'text-pink-500' },
+  { bg: 'bg-cyan-500',    text: 'text-cyan-500' },
+  { bg: 'bg-yellow-500',  text: 'text-yellow-500' },
+  { bg: 'bg-red-500',     text: 'text-red-500' },
+  { bg: 'bg-indigo-500',  text: 'text-indigo-500' },
+  { bg: 'bg-teal-500',    text: 'text-teal-500' },
+  { bg: 'bg-lime-500',    text: 'text-lime-500' },
+  { bg: 'bg-rose-500',    text: 'text-rose-500' },
+  { bg: 'bg-violet-500',  text: 'text-violet-500' },
+  { bg: 'bg-amber-500',   text: 'text-amber-500' },
+]
 
 interface Props { courtNumber: number }
 
@@ -122,9 +140,12 @@ export default function CourtDetail({ courtNumber }: Props) {
       onTouchEnd={handleTouchEnd}
     >
       {/* Match header */}
-      <div className="px-5 py-4 border-b border-gray-800 flex-shrink-0 relative overflow-hidden">
+      <div className="border-b border-gray-800 flex-shrink-0 relative overflow-hidden">
+        {/* Color accent bar */}
+        <div className={clsx('h-1 w-full', COURT_COLORS[(courtNumber - 1) % COURT_COLORS.length].bg)} />
+        <div className="px-5 py-4">
         {/* Watermark */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[80px] font-black text-white/[0.04] leading-none select-none pointer-events-none">
+        <div className={clsx('absolute right-3 top-1/2 -translate-y-1/2 text-[80px] font-black leading-none select-none pointer-events-none opacity-[0.06]', COURT_COLORS[(courtNumber - 1) % COURT_COLORS.length].text)}>
           {courtNumber}
         </div>
         <p className="text-xs text-gray-600 font-semibold uppercase tracking-widest mb-1">Court {courtNumber}</p>
@@ -252,6 +273,7 @@ export default function CourtDetail({ courtNumber }: Props) {
               {t}
             </button>
           ))}
+        </div>
         </div>
       </div>
 
@@ -406,6 +428,14 @@ export default function CourtDetail({ courtNumber }: Props) {
           )}
         </div>
       )}
+      {/* Court strip */}
+      <div className="flex-shrink-0 border-t border-gray-800 bg-gray-900/50 p-2 overflow-x-auto">
+        <div className="flex gap-2" style={{ width: 'max-content' }}>
+          {Array.from({ length: courtCount }, (_, i) => (
+            <CourtCard key={i + 1} courtNumber={i + 1} mini />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

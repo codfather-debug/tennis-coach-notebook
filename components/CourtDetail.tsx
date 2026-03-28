@@ -23,6 +23,7 @@ export default function CourtDetail({ courtNumber }: Props) {
   const [copied, setCopied] = useState(false)
   const [playerEmail, setPlayerEmail] = useState<string | null>(null)
   const touchStartX = useRef<number>(0)
+  const touchStartY = useRef<number>(0)
 
   useEffect(() => {
     fetch('/api/players')
@@ -45,10 +46,13 @@ export default function CourtDetail({ courtNumber }: Props) {
   }
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
   }
   function handleTouchEnd(e: React.TouchEvent) {
     const dx = e.changedTouches[0].clientX - touchStartX.current
-    if (Math.abs(dx) < 50) return
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    if (Math.abs(dy) > Math.abs(dx)) return  // vertical scroll, not a swipe
+    if (Math.abs(dx) < 60) return
     if (dx < 0) goNext()
     else goPrev()
   }

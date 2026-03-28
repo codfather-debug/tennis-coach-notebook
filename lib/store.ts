@@ -47,7 +47,7 @@ interface AppStore {
   loadWeather: () => Promise<void>
 
   createMeet: (name: string) => Promise<void>
-  endMeet: () => void
+  endMeet: () => Promise<void>
 
   setupCourt: (courtNumber: number, opts: SetupOpts) => Promise<void>
   updateSet: (courtNumber: number, setIndex: number, side: 'player' | 'opponent', value: number) => void
@@ -102,10 +102,18 @@ export const useStore = create<AppStore>()(
       }
     },
 
-    endMeet: () => set((s) => {
-      s.activeMeetId = null
-      s.activeMeetName = null
-    }),
+    endMeet: async () => {
+      const { courts, activeMeetId } = get()
+      // End all active matches belonging to this meet
+      const toEnd = courts.filter(c => c.status === 'active' && c.meetId === activeMeetId)
+      for (const court of toEnd) {
+        await get().endMatch(court.courtNumber)
+      }
+      set((s) => {
+        s.activeMeetId = null
+        s.activeMeetName = null
+      })
+    },
 
     setupCourt: async (courtNumber, opts) => {
       const supabase = createClient()

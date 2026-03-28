@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useStore } from '@/lib/store'
 import ScoreInput from './ScoreInput'
 import NoteInput from './NoteInput'
@@ -11,7 +11,7 @@ import clsx from 'clsx'
 interface Props { courtNumber: number }
 
 export default function CourtDetail({ courtNumber }: Props) {
-  const { courts, endMatch, clearCourt, deleteMatch, renamePlayer } = useStore()
+  const { courts, endMatch, clearCourt, deleteMatch, renamePlayer, setActiveCourt, courtCount } = useStore()
   const court = courts[courtNumber - 1]
   const [tab, setTab] = useState<'notes' | 'score'>('notes')
   const [confirmEnd, setConfirmEnd] = useState(false)
@@ -21,6 +21,37 @@ export default function CourtDetail({ courtNumber }: Props) {
   const [editingName, setEditingName] = useState(false)
   const [nameValue, setNameValue] = useState('')
   const [copied, setCopied] = useState(false)
+  const [playerEmail, setPlayerEmail] = useState<string | null>(null)
+  const touchStartX = useRef<number>(0)
+
+  useEffect(() => {
+    fetch('/api/players')
+      .then(r => r.json())
+      .then((players: { name: string; email: string | null }[]) => {
+        const found = players.find(p => p.name.toLowerCase() === court.playerName.toLowerCase())
+        if (found?.email) setPlayerEmail(found.email)
+        else setPlayerEmail(null)
+      })
+      .catch(() => {})
+  }, [court.playerName])
+
+  function goNext() {
+    const next = courtNumber < courtCount ? courtNumber + 1 : 1
+    setActiveCourt(next)
+  }
+  function goPrev() {
+    const prev = courtNumber > 1 ? courtNumber - 1 : courtCount
+    setActiveCourt(prev)
+  }
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+  }
+  function handleTouchEnd(e: React.TouchEvent) {
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    if (Math.abs(dx) < 50) return
+    if (dx < 0) goNext()
+    else goPrev()
+  }
 
   async function handleGenerateSummary() {
     setGeneratingSummary(true)
@@ -75,7 +106,11 @@ export default function CourtDetail({ courtNumber }: Props) {
   if (court.status === 'empty') return <MatchSetup courtNumber={courtNumber} />
 
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-56px)]">
+    <div
+      className="flex flex-col h-full max-h-[calc(100vh-56px)]"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Match header */}
       <div className="px-5 py-4 border-b border-gray-800 flex-shrink-0">
         <div className="flex items-start justify-between">
@@ -243,6 +278,30 @@ export default function CourtDetail({ courtNumber }: Props) {
           >
             {copied ? '✓ Copied to clipboard' : '↗ Export Notes'}
           </button>
+          {playerEmail && (
+            <a
+              href={`mailto:${playerEmail}?subject=${encodeURIComponent(`Match Report: ${court.playerName} vs ${court.opponentName}`)}&body=${encodeURIComponent(
+                [
+                  `MATCH REPORT`,
+                  `${court.playerName} vs ${court.opponentName}`,
+                  court.startedAt ? `Started: ${new Date(court.startedAt).toLocaleString()}` : '',
+                  ``,
+                  `SCORE`,
+                  court.sets.length
+                    ? court.sets.map((s, i) => `Set ${i + 1}: ${s.player}–${s.opponent}${s.tiebreak ? ` (${s.tiebreak.player}–${s.tiebreak.opponent})` : ''}`).join('  ')
+                    : 'No score recorded',
+                  ``,
+                  `NOTES (${court.notes.length})`,
+                  ...[...court.notes].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                    .map(n => `${new Date(n.timestamp).toLocaleTimeString()}${n.tags.length ? ` [${n.tags.join(', ')}]` : ''}: ${n.content}`),
+                  ...(summary ? [``, `AI SUMMARY`, summary] : []),
+                ].filter(l => l !== undefined).join('\n')
+              )}`}
+              className="w-full flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 transition"
+            >
+              📧 Send to {playerEmail}
+            </a>
+          )}
         </div>
       )}
     </div>

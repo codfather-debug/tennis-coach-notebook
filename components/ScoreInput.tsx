@@ -17,29 +17,19 @@ export default function ScoreInput({ courtNumber }: Props) {
     <div className="px-5 py-4 space-y-5">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Final Set Scores</h3>
-        <div className="flex items-center gap-2">
-          {isFinished && (
-            <button
-              onClick={() => setEditing(e => !e)}
-              className={clsx(
-                'text-xs px-3 py-1 rounded-lg transition font-medium',
-                editing
-                  ? 'bg-yellow-600/30 text-yellow-300 border border-yellow-600/50'
-                  : 'bg-gray-800 text-gray-400 hover:text-white'
-              )}
-            >
-              {editing ? 'Done' : 'Edit'}
-            </button>
-          )}
-          {!locked && court.sets.length < 5 && (
-            <button
-              onClick={() => addSet(courtNumber)}
-              className="text-xs text-green-400 hover:text-green-300 transition font-medium"
-            >
-              + Add Set
-            </button>
-          )}
-        </div>
+        {isFinished && (
+          <button
+            onClick={() => setEditing(e => !e)}
+            className={clsx(
+              'text-xs px-3 py-1 rounded-lg transition font-medium',
+              editing
+                ? 'bg-yellow-600/30 text-yellow-300 border border-yellow-600/50'
+                : 'bg-gray-800 text-gray-400 hover:text-white'
+            )}
+          >
+            {editing ? 'Done' : 'Edit'}
+          </button>
+        )}
       </div>
 
       {court.sets.length === 0 && (
@@ -100,6 +90,16 @@ export default function ScoreInput({ courtNumber }: Props) {
                 max={7}
               />
             </div>
+
+            {/* Save Set / Add Next Set — shown on last active set */}
+            {!locked && i === court.sets.length - 1 && court.sets.length < 5 && (
+              <button
+                onClick={() => addSet(courtNumber)}
+                className="w-full mt-1 bg-green-700/30 hover:bg-green-700/50 text-green-300 text-sm font-semibold rounded-xl py-3 transition border border-green-700/40"
+              >
+                + Save Set & Add Next
+              </button>
+            )}
 
             {/* Tiebreak — shown when 6-6 */}
             {isTied && (

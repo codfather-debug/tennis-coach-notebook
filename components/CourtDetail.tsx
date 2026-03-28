@@ -6,6 +6,7 @@ import NoteInput from './NoteInput'
 import NoteList from './NoteList'
 import MatchSetup from './MatchSetup'
 import WeatherWidget from './WeatherWidget'
+import QuickLogPanel from './QuickLogPanel'
 import clsx from 'clsx'
 
 interface Props { courtNumber: number }
@@ -252,7 +253,8 @@ export default function CourtDetail({ courtNumber }: Props) {
         ) : (
           <div className="flex flex-col h-full">
             {court.status === 'active' && (
-              <div className="px-5 pt-4 flex-shrink-0">
+              <div className="px-5 pt-4 flex-shrink-0 space-y-4">
+                <QuickLogPanel courtNumber={courtNumber} />
                 <NoteInput courtNumber={courtNumber} />
               </div>
             )}

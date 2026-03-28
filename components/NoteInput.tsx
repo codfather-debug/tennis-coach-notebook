@@ -171,17 +171,17 @@ export default function NoteInput({ courtNumber }: Props) {
           )}>
             {hasLiveScore ? `${livePlayer}–${liveOpponent}` : '–'}
           </span>
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             {(['serving', 'returning'] as Side[]).map(s => (
               <button
                 key={s}
                 type="button"
                 onClick={() => setSide(prev => prev === s ? null : s)}
                 className={clsx(
-                  'text-xs px-2.5 py-1 rounded-lg border transition font-medium capitalize',
+                  'flex-1 text-sm px-4 py-2.5 rounded-xl border transition font-semibold capitalize',
                   side === s
-                    ? 'bg-yellow-600/30 text-yellow-300 border-yellow-600/50'
-                    : 'bg-transparent border-gray-700 text-gray-500 hover:text-gray-300 hover:border-gray-500'
+                    ? 'bg-yellow-600/40 text-yellow-200 border-yellow-500/60'
+                    : 'bg-gray-800/60 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500'
                 )}
               >
                 {s}

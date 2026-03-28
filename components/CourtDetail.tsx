@@ -340,7 +340,7 @@ export default function CourtDetail({ courtNumber }: Props) {
                   </div>
                 </div>
 
-                <QuickLogPanel courtNumber={courtNumber} />
+                <QuickLogPanel courtNumber={courtNumber} livePlayer={livePlayer} liveOpponent={liveOpponent} side={side} />
                 <NoteInput
                   courtNumber={courtNumber}
                   livePlayer={livePlayer}

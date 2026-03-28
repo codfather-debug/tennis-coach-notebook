@@ -4,7 +4,12 @@ import { useStore } from '@/lib/store'
 import type { NoteTag } from '@/types'
 import clsx from 'clsx'
 
-interface Props { courtNumber: number }
+interface Props {
+  courtNumber: number
+  livePlayer: number | null
+  liveOpponent: number | null
+  side: 'serving' | 'returning' | null
+}
 
 interface QuickEntry {
   label: string
@@ -73,13 +78,17 @@ const SECTIONS: Section[] = [
   },
 ]
 
-export default function QuickLogPanel({ courtNumber }: Props) {
+export default function QuickLogPanel({ courtNumber, livePlayer, liveOpponent, side }: Props) {
   const { addNote } = useStore()
   const [tapped, setTapped] = useState<string | null>(null)
 
   async function handleTap(entry: QuickEntry) {
     setTapped(entry.label)
-    await addNote(courtNumber, entry.content, entry.tags)
+    const contextParts: string[] = []
+    if (livePlayer !== null && liveOpponent !== null) contextParts.push(`${livePlayer}–${liveOpponent}`)
+    if (side) contextParts.push(side === 'serving' ? 'Serving' : 'Returning')
+    const content = contextParts.length ? `[${contextParts.join(' · ')}] ${entry.content}` : entry.content
+    await addNote(courtNumber, content, entry.tags)
     setTimeout(() => setTapped(null), 700)
   }
 

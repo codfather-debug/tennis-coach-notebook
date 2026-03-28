@@ -13,7 +13,7 @@ interface Props { coachId: string }
 export default function DashboardClient({ coachId }: Props) {
   const {
     setCoachId, loadActiveMatches, loadWeather,
-    activeCourt, weather, courtCount, setCourtCount,
+    activeCourt, setActiveCourt, weather, courtCount, setCourtCount,
     activeMeetId, activeMeetName, createMeet, endMeet,
   } = useStore()
   const [loading, setLoading] = useState(true)

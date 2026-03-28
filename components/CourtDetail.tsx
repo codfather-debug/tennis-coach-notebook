@@ -23,8 +23,13 @@ export default function CourtDetail({ courtNumber }: Props) {
   const [nameValue, setNameValue] = useState('')
   const [copied, setCopied] = useState(false)
   const [playerEmail, setPlayerEmail] = useState<string | null>(null)
+  const [livePlayer, setLivePlayer] = useState<number | null>(null)
+  const [liveOpponent, setLiveOpponent] = useState<number | null>(null)
+  const [side, setSide] = useState<'serving' | 'returning' | null>(null)
   const touchStartX = useRef<number>(0)
   const touchStartY = useRef<number>(0)
+
+  const hasLiveScore = livePlayer !== null && liveOpponent !== null
 
   useEffect(() => {
     fetch('/api/players')
@@ -253,9 +258,95 @@ export default function CourtDetail({ courtNumber }: Props) {
         ) : (
           <div className="flex flex-col h-full">
             {court.status === 'active' && (
-              <div className="px-5 pt-4 flex-shrink-0 space-y-4">
+              <div className="px-5 pt-4 flex-shrink-0 space-y-3">
+                {/* Live score widget */}
+                <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Current Score</span>
+                    {hasLiveScore && (
+                      <button
+                        type="button"
+                        onClick={() => { setLivePlayer(null); setLiveOpponent(null) }}
+                        className="text-xs text-gray-600 hover:text-gray-400 transition"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-600 truncate">{court.playerName}</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {[0,1,2,3,4,5,6].map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setLivePlayer(prev => prev === n ? null : n)}
+                          className={clsx(
+                            'w-8 h-8 rounded-lg text-sm font-bold transition',
+                            livePlayer === n
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                          )}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-600 truncate">{court.opponentName}</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {[0,1,2,3,4,5,6].map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setLiveOpponent(prev => prev === n ? null : n)}
+                          className={clsx(
+                            'w-8 h-8 rounded-lg text-sm font-bold transition',
+                            liveOpponent === n
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                          )}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <span className={clsx(
+                      'text-sm font-mono font-bold',
+                      hasLiveScore ? 'text-white' : 'text-gray-700'
+                    )}>
+                      {hasLiveScore ? `${livePlayer}–${liveOpponent}` : '–'}
+                    </span>
+                    <div className="flex gap-2">
+                      {(['serving', 'returning'] as const).map(s => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setSide(prev => prev === s ? null : s)}
+                          className={clsx(
+                            'flex-1 text-sm px-4 py-2.5 rounded-xl border transition font-semibold capitalize',
+                            side === s
+                              ? 'bg-yellow-600/40 text-yellow-200 border-yellow-500/60'
+                              : 'bg-gray-800/60 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 <QuickLogPanel courtNumber={courtNumber} />
-                <NoteInput courtNumber={courtNumber} />
+                <NoteInput
+                  courtNumber={courtNumber}
+                  livePlayer={livePlayer}
+                  liveOpponent={liveOpponent}
+                  side={side}
+                />
               </div>
             )}
             <div className="flex-1 overflow-y-auto px-5 py-3">

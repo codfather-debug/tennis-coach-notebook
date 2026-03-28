@@ -128,12 +128,11 @@ export default function DashboardClient({ coachId }: Props) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveCourt(null)}
-              className="text-xl leading-none"
+              className="flex items-center gap-1.5 text-sm font-bold text-white hover:text-green-400 transition"
               title="Home"
             >
-              🎾
+              🎾 <span>Home</span>
             </button>
-            <span className="font-bold text-white text-sm tracking-wide">Coach Notebook</span>
           </div>
           <div className="flex items-center gap-3">
             {weather ? (
@@ -156,7 +155,7 @@ export default function DashboardClient({ coachId }: Props) {
           </div>
         </div>
 
-        {/* Row 2: Players + History */}
+        {/* Row 2: Players + History + Create Meet */}
         <div className="flex gap-2 px-4 pb-2">
           <Link
             href="/players"
@@ -170,6 +169,12 @@ export default function DashboardClient({ coachId }: Props) {
           >
             History
           </Link>
+          <button
+            onClick={() => setActiveCourt(null)}
+            className="flex-1 text-center text-xs text-green-400 hover:text-green-300 transition py-1.5 rounded-lg hover:bg-green-900/30 bg-green-900/20 font-semibold"
+          >
+            + Meet
+          </button>
         </div>
 
         {/* Row 3: Active meet bar — only shown when meet is running */}

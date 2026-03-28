@@ -122,7 +122,11 @@ export default function CourtDetail({ courtNumber }: Props) {
       onTouchEnd={handleTouchEnd}
     >
       {/* Match header */}
-      <div className="px-5 py-4 border-b border-gray-800 flex-shrink-0">
+      <div className="px-5 py-4 border-b border-gray-800 flex-shrink-0 relative overflow-hidden">
+        {/* Watermark */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[80px] font-black text-white/[0.04] leading-none select-none pointer-events-none">
+          {courtNumber}
+        </div>
         <p className="text-xs text-gray-600 font-semibold uppercase tracking-widest mb-1">Court {courtNumber}</p>
         <div className="flex items-start justify-between">
           <div>

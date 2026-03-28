@@ -236,12 +236,23 @@ export default function DashboardClient({ coachId }: Props) {
         </div>
 
         {/* Court detail — takes full height on mobile */}
-        <div className="flex-1 lg:border-l border-gray-800 overflow-hidden min-h-0">
-          {activeCourt ? (
-            <CourtDetail courtNumber={activeCourt} />
-          ) : (
-            <HomeScreen />
-          )}
+        <div className="flex-1 lg:border-l border-gray-800 overflow-hidden min-h-0 flex flex-col">
+          <div className="flex-1 overflow-hidden min-h-0">
+            {activeCourt ? (
+              <CourtDetail courtNumber={activeCourt} />
+            ) : (
+              <HomeScreen />
+            )}
+          </div>
+
+          {/* Pinned court strip — mobile only */}
+          <div className="lg:hidden flex-shrink-0 border-t border-gray-800 bg-gray-950 overflow-x-auto">
+            <div className="flex gap-0" style={{ width: 'max-content' }}>
+              {Array.from({ length: courtCount }, (_, i) => (
+                <CourtCard key={i + 1} courtNumber={i + 1} mini />
+              ))}
+            </div>
+          </div>
         </div>
 
       </main>

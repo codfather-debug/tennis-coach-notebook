@@ -7,7 +7,6 @@ import NoteList from './NoteList'
 import MatchSetup from './MatchSetup'
 import WeatherWidget from './WeatherWidget'
 import QuickLogPanel from './QuickLogPanel'
-import CourtCard from './CourtCard'
 import clsx from 'clsx'
 
 const COURT_COLORS = [
@@ -428,14 +427,6 @@ export default function CourtDetail({ courtNumber }: Props) {
           )}
         </div>
       )}
-      {/* Court strip */}
-      <div className="flex-shrink-0 border-t border-gray-800 bg-gray-900/50 p-2 overflow-x-auto">
-        <div className="flex gap-2" style={{ width: 'max-content' }}>
-          {Array.from({ length: courtCount }, (_, i) => (
-            <CourtCard key={i + 1} courtNumber={i + 1} mini />
-          ))}
-        </div>
-      </div>
     </div>
   )
 }

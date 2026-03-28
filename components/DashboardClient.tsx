@@ -11,7 +11,7 @@ import clsx from 'clsx'
 interface Props { coachId: string }
 
 function HomeScreen() {
-  const { createMeet, setCourtCount, setActiveCourt } = useStore()
+  const { createMeet, setCourtCount, setActiveCourt, activeMeetId, activeMeetName, courtCount } = useStore()
   const [meetName, setMeetName] = useState('')
   const [localCourtCount, setLocalCourtCount] = useState(4)
   const [loading, setLoading] = useState(false)
@@ -24,6 +24,23 @@ function HomeScreen() {
     await createMeet(meetName.trim())
     setActiveCourt(1)
     setLoading(false)
+  }
+
+  // Mid-meet home: show court selector
+  if (activeMeetId) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full px-6 bg-gray-950">
+        <div className="w-full max-w-sm text-center space-y-4">
+          <p className="text-yellow-400 text-xs font-bold uppercase tracking-widest">📋 {activeMeetName}</p>
+          <h2 className="text-white font-black text-2xl">Select a Court</h2>
+          <div className="grid grid-cols-4 gap-3 mt-4">
+            {Array.from({ length: courtCount }, (_, i) => i + 1).map(n => (
+              <CourtCard key={n} courtNumber={n} />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -109,7 +126,13 @@ export default function DashboardClient({ coachId }: Props) {
         {/* Row 1: logo + weather + courts */}
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🎾</span>
+            <button
+              onClick={() => setActiveCourt(null)}
+              className="text-xl leading-none"
+              title="Home"
+            >
+              🎾
+            </button>
             <span className="font-bold text-white text-sm tracking-wide">Coach Notebook</span>
           </div>
           <div className="flex items-center gap-3">

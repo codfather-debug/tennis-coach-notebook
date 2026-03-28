@@ -41,7 +41,7 @@ interface AppStore {
   activeMeetName: string | null
 
   setCoachId: (id: string) => void
-  setActiveCourt: (court: number) => void
+  setActiveCourt: (court: number | null) => void
   setCourtCount: (n: number) => void
   setWeather: (w: WeatherSnapshot) => void
   loadWeather: () => Promise<void>
@@ -74,7 +74,7 @@ export const useStore = create<AppStore>()(
 
     setCoachId: (id) => set((s) => { s.coachId = id }),
 
-    setActiveCourt: (court) => set((s) => { s.activeCourt = court }),
+    setActiveCourt: (court) => set((s) => { s.activeCourt = court as number | null }),
 
     setCourtCount: (n) => set((s) => { s.courtCount = n }),
 

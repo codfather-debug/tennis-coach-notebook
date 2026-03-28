@@ -3,7 +3,7 @@ import { useStore } from '@/lib/store'
 import clsx from 'clsx'
 import type { MatchStatus, SetScore } from '@/types'
 
-interface Props { courtNumber: number }
+interface Props { courtNumber: number; mini?: boolean }
 
 const statusDot: Record<MatchStatus, string> = {
   empty:    'bg-gray-600',
@@ -33,7 +33,7 @@ function getScoreTextClass(sets: SetScore[]): string {
   return 'text-red-300'
 }
 
-export default function CourtCard({ courtNumber }: Props) {
+export default function CourtCard({ courtNumber, mini }: Props) {
   const { courts, activeCourt, setActiveCourt } = useStore()
   const court = courts[courtNumber - 1]
   const isActive = activeCourt === courtNumber
@@ -46,7 +46,39 @@ export default function CourtCard({ courtNumber }: Props) {
 
   function formatSets(sets: typeof court.sets) {
     if (!sets.length) return null
-    return sets.map(s => `${s.player}–${s.opponent}`).join('  ')
+    return sets.map(s => `${s.player}–${s.opponent}`).join(' ')
+  }
+
+  if (mini) {
+    return (
+      <button
+        onClick={() => setActiveCourt(courtNumber)}
+        className={clsx(
+          'flex-shrink-0 text-left rounded-xl border p-2 transition-all w-20',
+          cardBg,
+          isActive && 'ring-2 ring-white/30 ring-offset-1 ring-offset-gray-950'
+        )}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-bold text-gray-300">{courtNumber}</span>
+          <span className={clsx('w-1.5 h-1.5 rounded-full flex-shrink-0', statusDot[court.status])} />
+        </div>
+        {court.status === 'empty' ? (
+          <p className="text-gray-600 text-xs">—</p>
+        ) : (
+          <>
+            <p className="text-white text-xs font-medium truncate">{court.playerName}</p>
+            {formatSets(court.sets) ? (
+              <p className={clsx('text-xs font-mono truncate', getScoreTextClass(court.sets))}>
+                {formatSets(court.sets)}
+              </p>
+            ) : (
+              <p className="text-gray-600 text-xs">Active</p>
+            )}
+          </>
+        )}
+      </button>
+    )
   }
 
   return (

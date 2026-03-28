@@ -103,9 +103,8 @@ export const useStore = create<AppStore>()(
     },
 
     endMeet: async () => {
-      const { courts, activeMeetId } = get()
-      // End all active matches belonging to this meet
-      const toEnd = courts.filter(c => c.status === 'active' && c.meetId === activeMeetId)
+      const { courts } = get()
+      const toEnd = courts.filter(c => c.status === 'active')
       for (const court of toEnd) {
         await get().endMatch(court.courtNumber)
       }

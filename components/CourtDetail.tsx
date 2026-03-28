@@ -113,6 +113,7 @@ export default function CourtDetail({ courtNumber }: Props) {
     >
       {/* Match header */}
       <div className="px-5 py-4 border-b border-gray-800 flex-shrink-0">
+        <p className="text-xs text-gray-600 font-semibold uppercase tracking-widest mb-1">Court {courtNumber}</p>
         <div className="flex items-start justify-between">
           <div>
             {editingName ? (

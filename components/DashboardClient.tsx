@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '@/lib/store'
 import CourtGrid from './CourtGrid'
+import CourtCard from './CourtCard'
 import CourtDetail from './CourtDetail'
 import WeatherWidget from './WeatherWidget'
 import Link from 'next/link'
@@ -142,10 +143,11 @@ export default function DashboardClient({ coachId }: Props) {
       )}
 
       {/* Main */}
-      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        <div className="lg:w-auto lg:min-w-[520px] p-4">
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+        {/* Desktop: court grid sidebar */}
+        <div className="hidden lg:block lg:w-auto lg:min-w-[520px] p-4 overflow-y-auto">
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
               {Array.from({ length: courtCount }, (_, i) => (
                 <div key={i} className="h-24 rounded-xl bg-gray-800/50 animate-pulse" />
               ))}
@@ -155,14 +157,24 @@ export default function DashboardClient({ coachId }: Props) {
           )}
         </div>
 
-        <div className="flex-1 border-t lg:border-t-0 lg:border-l border-gray-800 overflow-hidden">
+        {/* Court detail — takes full height on mobile */}
+        <div className="flex-1 lg:border-l border-gray-800 overflow-hidden min-h-0">
           {activeCourt ? (
             <CourtDetail courtNumber={activeCourt} />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-600 text-sm">
-              Select a court to view details
+              Tap a court below to get started
             </div>
           )}
+        </div>
+
+        {/* Mobile: court cards strip at bottom */}
+        <div className="lg:hidden flex-shrink-0 border-t border-gray-800 bg-gray-900/50 p-2 overflow-x-auto">
+          <div className="flex gap-2" style={{ width: 'max-content' }}>
+            {Array.from({ length: courtCount }, (_, i) => (
+              <CourtCard key={i + 1} courtNumber={i + 1} mini />
+            ))}
+          </div>
         </div>
       </main>
     </div>

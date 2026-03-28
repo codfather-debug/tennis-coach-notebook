@@ -240,10 +240,8 @@ export const useStore = create<AppStore>()(
         weather_snapshot: court.weatherSnapshot,
       }).eq('id', court.matchId)
 
-      set((s) => {
-        s.courts[courtNumber - 1].status = 'finished'
-        s.courts[courtNumber - 1].isSaving = false
-      })
+      // Save complete — clear court so it's ready for next match
+      set((s) => { s.courts[courtNumber - 1] = emptyCourtState(courtNumber) })
     },
 
     deleteMatch: async (courtNumber) => {

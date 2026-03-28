@@ -23,7 +23,10 @@ export default function DashboardClient({ coachId }: Props) {
 
   useEffect(() => {
     setCoachId(coachId)
-    loadActiveMatches().then(() => setLoading(false))
+    loadActiveMatches().then(() => {
+      setLoading(false)
+      setActiveCourt(1)
+    })
     loadWeather().then(() => setWeatherAttempted(true))
   }, [coachId])
 

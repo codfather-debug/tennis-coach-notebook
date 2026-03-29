@@ -108,6 +108,7 @@ export default function DashboardClient({ coachId }: Props) {
   const [loading, setLoading] = useState(true)
   const [weatherAttempted, setWeatherAttempted] = useState(false)
   const [confirmDeleteMeet, setConfirmDeleteMeet] = useState(false)
+  const [meetEnded, setMeetEnded] = useState(false)
 
   useEffect(() => {
     setCoachId(coachId)
@@ -201,7 +202,7 @@ export default function DashboardClient({ coachId }: Props) {
             ) : (
               <div className="ml-auto flex gap-1">
                 <button
-                  onClick={endMeet}
+                  onClick={async () => { await endMeet(); setMeetEnded(true); setActiveCourt(null) }}
                   className="text-xs text-gray-500 hover:text-white transition px-2 py-1 rounded hover:bg-gray-800"
                 >
                   End Meet
@@ -237,7 +238,35 @@ export default function DashboardClient({ coachId }: Props) {
 
         {/* Court detail — takes full height on mobile, padded so content clears the fixed strip */}
         <div className="flex-1 lg:border-l border-gray-800 overflow-hidden min-h-0 lg:pb-0 pb-[60px]">
-          {activeCourt ? (
+          {meetEnded ? (
+            <div className="flex flex-col items-center justify-center h-full px-6 bg-gray-950">
+              <div className="w-full max-w-sm space-y-4 text-center">
+                <div className="text-5xl mb-2">✅</div>
+                <h2 className="text-white font-black text-2xl">Meet Complete</h2>
+                <p className="text-gray-500 text-sm mb-6">What would you like to do next?</p>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => setMeetEnded(false)}
+                    className="w-full bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-black rounded-2xl px-4 py-6 transition text-xl shadow-lg shadow-green-900/40"
+                  >
+                    ▶ Start New Meet
+                  </button>
+                  <Link
+                    href="/history"
+                    className="w-full block bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-2xl px-4 py-6 transition text-xl text-center"
+                  >
+                    📋 History
+                  </Link>
+                  <Link
+                    href="/players"
+                    className="w-full block bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-2xl px-4 py-6 transition text-xl text-center"
+                  >
+                    👤 Players
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : activeCourt ? (
             <CourtDetail courtNumber={activeCourt} />
           ) : (
             <HomeScreen />

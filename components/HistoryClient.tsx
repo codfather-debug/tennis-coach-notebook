@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import type { SetScore, Note, WeatherSnapshot } from '@/types'
 import { NOTE_TAGS } from '@/types'
 import { format } from 'date-fns'
@@ -21,6 +21,7 @@ interface MatchRow {
   weather_snapshot: WeatherSnapshot | null
   started_at: string
   ended_at: string
+  ai_summary: string | null
 }
 
 interface MeetRow {
@@ -48,6 +49,7 @@ export default function HistoryClient({ matches: initialMatches, meets: initialM
   const [meetList, setMeetList] = useState(initialMeets)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [expandedMeets, setExpandedMeets] = useState<Set<string>>(new Set())
   const [confirmDeleteMeetId, setConfirmDeleteMeetId] = useState<string | null>(null)
   const selected = matches.find(m => m.id === selectedId)
@@ -86,15 +88,21 @@ export default function HistoryClient({ matches: initialMatches, meets: initialM
   }
 
   const filtered = useMemo(() => {
+    let result = matches
     const q = search.toLowerCase().trim()
-    if (!q) return matches
-    return matches.filter(m =>
-      m.player_name.toLowerCase().includes(q) ||
-      m.opponent_name.toLowerCase().includes(q) ||
-      (m.player_name_2 ?? '').toLowerCase().includes(q) ||
-      (m.opponent_name_2 ?? '').toLowerCase().includes(q)
-    )
-  }, [matches, search])
+    if (q) {
+      result = result.filter(m =>
+        m.player_name.toLowerCase().includes(q) ||
+        m.opponent_name.toLowerCase().includes(q) ||
+        (m.player_name_2 ?? '').toLowerCase().includes(q) ||
+        (m.opponent_name_2 ?? '').toLowerCase().includes(q)
+      )
+    }
+    if (tagFilter) {
+      result = result.filter(m => m.notes.some(n => n.tags.includes(tagFilter as any)))
+    }
+    return result
+  }, [matches, search, tagFilter])
 
   // Matches grouped by meet
   const meetMatches = useMemo(() => {
@@ -195,13 +203,37 @@ export default function HistoryClient({ matches: initialMatches, meets: initialM
           'w-full lg:w-72',
           showDetail ? 'hidden lg:flex' : 'flex'
         )}>
-          <div className="p-3 border-b border-gray-800 flex-shrink-0">
+          <div className="p-3 border-b border-gray-800 flex-shrink-0 space-y-2">
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search player..."
               className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition"
             />
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { value: 'winner',        label: 'Winner',   color: 'bg-green-600/30 text-green-300 border-green-500/50' },
+                { value: 'unforced-error',label: 'UE',       color: 'bg-red-600/30 text-red-300 border-red-500/50' },
+                { value: 'ace',           label: 'Ace',      color: 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50' },
+                { value: 'highlight',     label: 'Highlight',color: 'bg-yellow-600/30 text-yellow-300 border-yellow-500/50' },
+                { value: 'mental-lapse',  label: 'Mental',   color: 'bg-yellow-800/30 text-yellow-400 border-yellow-700/50' },
+                { value: 'net-play',      label: 'Net Play', color: 'bg-cyan-600/30 text-cyan-300 border-cyan-500/50' },
+              ].map(tag => (
+                <button
+                  key={tag.value}
+                  type="button"
+                  onClick={() => setTagFilter(prev => prev === tag.value ? null : tag.value)}
+                  className={clsx(
+                    'text-xs px-2.5 py-1 rounded-full border transition font-medium',
+                    tagFilter === tag.value
+                      ? tag.color + ' ring-1 ring-white/20'
+                      : 'bg-gray-800/60 text-gray-600 border-gray-700 hover:text-gray-300'
+                  )}
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {filtered.length === 0 && (
@@ -292,7 +324,7 @@ export default function HistoryClient({ matches: initialMatches, meets: initialM
 
 function MatchDetail({ match }: { match: MatchRow }) {
   const result = computeResult(match.sets)
-  const [summary, setSummary] = useState<string | null>(null)
+  const [summary, setSummary] = useState<string | null>(match.ai_summary ?? null)
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [copied, setCopied] = useState(false)
   const [playerEmail, setPlayerEmail] = useState<string | null>(null)
@@ -305,15 +337,16 @@ function MatchDetail({ match }: { match: MatchRow }) {
     ? `${match.opponent_name} / ${match.opponent_name_2}`
     : match.opponent_name
 
-  useState(() => {
+  useEffect(() => {
     fetch('/api/players')
       .then(r => r.json())
       .then((players: { name: string; email: string | null }[]) => {
         const found = players.find(p => p.name.toLowerCase() === match.player_name.toLowerCase())
         if (found?.email) setPlayerEmail(found.email)
+        else setPlayerEmail(null)
       })
       .catch(() => {})
-  })
+  }, [match.player_name])
 
   async function handleGenerateSummary() {
     setGeneratingSummary(true)

@@ -1,28 +1,66 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useStore } from '@/lib/store'
+import { createClient } from '@/lib/supabase'
+import { format } from 'date-fns'
 import CourtGrid from './CourtGrid'
 import CourtCard from './CourtCard'
 import CourtDetail from './CourtDetail'
 import WeatherWidget from './WeatherWidget'
+import SendResultsModal from './SendResultsModal'
 import Link from 'next/link'
 import clsx from 'clsx'
+import type { CourtState } from '@/types'
 
 interface Props { coachId: string }
 
 function HomeScreen() {
-  const { createMeet, setCourtCount, setActiveCourt, activeMeetId, activeMeetName, courtCount } = useStore()
+  const { createMeet, setCourtCount, setActiveCourt, activeMeetId, activeMeetName, courtCount, setCourtTemplates } = useStore()
   const [meetName, setMeetName] = useState('')
   const [localCourtCount, setLocalCourtCount] = useState(4)
   const [loading, setLoading] = useState(false)
-  const [recentMeets, setRecentMeets] = useState<{ id: string; name: string; court_count?: number }[]>([])
+  const [allMeets, setAllMeets] = useState<{ id: string; name: string; court_count?: number; created_at: string }[]>([])
+  const [meetSearch, setMeetSearch] = useState('')
+  const [loadingTemplate, setLoadingTemplate] = useState(false)
+  const [selectedMeetId, setSelectedMeetId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/meets')
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setRecentMeets(data.slice(0, 3)) })
+      .then(data => { if (Array.isArray(data)) setAllMeets(data.filter((m: any) => m.court_count > 0)) })
       .catch(() => {})
   }, [])
+
+  const filteredMeets = meetSearch.trim()
+    ? allMeets.filter(m => m.name.toLowerCase().includes(meetSearch.toLowerCase()))
+    : allMeets.slice(0, 2)
+
+  async function handleSelectMeet(m: typeof allMeets[0]) {
+    setMeetName(m.name)
+    if (m.court_count) setLocalCourtCount(m.court_count)
+    setSelectedMeetId(m.id)
+    setLoadingTemplate(true)
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('matches')
+      .select('court_number, player_name, player_name_2, opponent_name, opponent_name_2, match_type')
+      .eq('meet_id', m.id)
+      .order('court_number')
+    if (data) {
+      const templates: Record<number, any> = {}
+      for (const row of data) {
+        templates[row.court_number] = {
+          playerName: row.player_name ?? '',
+          playerName2: row.player_name_2 ?? '',
+          opponentName: row.opponent_name ?? '',
+          opponentName2: row.opponent_name_2 ?? '',
+          matchType: row.match_type ?? 'singles',
+        }
+      }
+      setCourtTemplates(templates)
+    }
+    setLoadingTemplate(false)
+  }
 
   async function handleStart(e: React.FormEvent) {
     e.preventDefault()
@@ -60,20 +98,45 @@ function HomeScreen() {
           <p className="text-gray-500 text-sm">Ready to track your courts</p>
         </div>
 
-        {recentMeets.length > 0 && (
+        {allMeets.length > 0 && (
           <div className="space-y-2 mb-6">
             <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Repeat a recent meet</p>
+            {allMeets.length > 2 && (
+              <input
+                value={meetSearch}
+                onChange={e => setMeetSearch(e.target.value)}
+                placeholder="Search meets..."
+                className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition"
+              />
+            )}
             <div className="flex flex-col gap-2">
-              {recentMeets.map(m => (
+              {filteredMeets.map(m => (
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => { setMeetName(m.name) }}
-                  className="w-full text-left bg-gray-800/60 hover:bg-gray-800 border border-gray-700 hover:border-gray-600 rounded-xl px-4 py-3 transition"
+                  onClick={() => handleSelectMeet(m)}
+                  className={clsx(
+                    'w-full text-left border rounded-xl px-4 py-3 transition',
+                    selectedMeetId === m.id
+                      ? 'bg-green-900/30 border-green-600/60'
+                      : 'bg-gray-800/60 hover:bg-gray-800 border-gray-700 hover:border-gray-600'
+                  )}
                 >
-                  <p className="text-white text-sm font-semibold">📋 {m.name}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-white text-sm font-semibold">📋 {m.name}</p>
+                    {selectedMeetId === m.id && (
+                      <span className="text-green-400 text-xs font-bold">{loadingTemplate ? '...' : '✓'}</span>
+                    )}
+                  </div>
+                  <p className="text-gray-500 text-xs mt-0.5">
+                    {format(new Date(m.created_at), 'MMM d, yyyy')}
+                    {m.court_count ? ` · ${m.court_count} court${m.court_count !== 1 ? 's' : ''}` : ''}
+                  </p>
                 </button>
               ))}
+              {filteredMeets.length === 0 && meetSearch && (
+                <p className="text-gray-600 text-sm text-center py-2">No meets found</p>
+              )}
             </div>
           </div>
         )}
@@ -135,6 +198,8 @@ export default function DashboardClient({ coachId }: Props) {
   const [weatherAttempted, setWeatherAttempted] = useState(false)
   const [confirmDeleteMeet, setConfirmDeleteMeet] = useState(false)
   const [meetEnded, setMeetEnded] = useState(false)
+  const [sendModal, setSendModal] = useState<{ courts: CourtState[]; meetName: string } | null>(null)
+  const [lastMeetSnapshot, setLastMeetSnapshot] = useState<{ courts: CourtState[]; meetName: string } | null>(null)
 
   useEffect(() => {
     setCoachId(coachId)
@@ -234,7 +299,21 @@ export default function DashboardClient({ coachId }: Props) {
             ) : (
               <div className="ml-auto flex gap-1">
                 <button
-                  onClick={() => { endMeet(); setMeetEnded(true); setActiveCourt(null) }}
+                  onClick={() => {
+                    const snapshot = useStore.getState().courts
+                      .filter(c => c.status !== 'empty' && c.matchId !== null)
+                      .map(c => ({ ...c }))
+                    const name = activeMeetName ?? ''
+                    endMeet()
+                    setActiveCourt(null)
+                    const payload = { courts: snapshot, meetName: name }
+                    setLastMeetSnapshot(payload)
+                    if (snapshot.length > 0) {
+                      setSendModal(payload)
+                    } else {
+                      setMeetEnded(true)
+                    }
+                  }}
                   className="text-xs text-gray-500 hover:text-white transition px-2 py-1 rounded hover:bg-gray-800"
                 >
                   End Meet
@@ -269,7 +348,7 @@ export default function DashboardClient({ coachId }: Props) {
         </div>
 
         {/* Court detail — takes full height on mobile, padded so content clears the fixed strip */}
-        <div className="flex-1 lg:border-l border-gray-800 overflow-hidden min-h-0 lg:pb-0 pb-[60px]">
+        <div className="flex-1 lg:border-l border-gray-800 overflow-hidden min-h-0 lg:pb-0" style={{ paddingBottom: 'max(60px, calc(60px + env(safe-area-inset-bottom)))' } as any}>
           {activeCourt ? (
             <CourtDetail courtNumber={activeCourt} />
           ) : (
@@ -279,6 +358,15 @@ export default function DashboardClient({ coachId }: Props) {
 
       </main>
 
+      {/* Send Results Modal */}
+      {sendModal && (
+        <SendResultsModal
+          courts={sendModal.courts}
+          meetName={sendModal.meetName}
+          onClose={() => { setSendModal(null); setMeetEnded(true) }}
+        />
+      )}
+
       {/* Post-meet screen — full screen overlay */}
       {meetEnded && (
         <div className="fixed inset-0 z-[100] bg-gray-950 flex flex-col items-center justify-center px-6">
@@ -287,6 +375,14 @@ export default function DashboardClient({ coachId }: Props) {
             <h2 className="text-white font-black text-2xl">Meet Complete</h2>
             <p className="text-gray-500 text-sm mb-6">What would you like to do next?</p>
             <div className="flex flex-col gap-3">
+              {lastMeetSnapshot && (
+                <button
+                  onClick={() => { setMeetEnded(false); setSendModal(lastMeetSnapshot) }}
+                  className="w-full bg-blue-700 hover:bg-blue-600 active:bg-blue-800 text-white font-black rounded-2xl px-4 py-6 transition text-xl shadow-lg shadow-blue-900/40"
+                >
+                  📧 Send Results
+                </button>
+              )}
               <button
                 onClick={() => setMeetEnded(false)}
                 className="w-full bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-black rounded-2xl px-4 py-6 transition text-xl shadow-lg shadow-green-900/40"
@@ -311,7 +407,7 @@ export default function DashboardClient({ coachId }: Props) {
       )}
 
       {/* Fixed court strip — always visible at bottom on mobile */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-800 bg-gray-950 overflow-x-auto">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-800 bg-gray-950 overflow-x-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex" style={{ width: 'max-content', minWidth: '100%' }}>
           {Array.from({ length: courtCount }, (_, i) => (
             <CourtCard key={i + 1} courtNumber={i + 1} mini />

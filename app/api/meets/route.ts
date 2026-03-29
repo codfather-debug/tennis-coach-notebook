@@ -8,11 +8,25 @@ export async function GET() {
 
   const { data } = await supabase
     .from('meets')
-    .select('*')
+    .select('id, name, created_at')
     .eq('coach_id', session.user.id)
     .order('created_at', { ascending: false })
 
-  return NextResponse.json(data ?? [])
+  const meetIds = (data ?? []).map(m => m.id)
+  let countMap: Record<string, number> = {}
+  if (meetIds.length) {
+    const { data: matchRows } = await supabase
+      .from('matches')
+      .select('meet_id')
+      .eq('coach_id', session.user.id)
+      .eq('status', 'finished')
+      .in('meet_id', meetIds)
+    for (const row of matchRows ?? []) {
+      if (row.meet_id) countMap[row.meet_id] = (countMap[row.meet_id] ?? 0) + 1
+    }
+  }
+
+  return NextResponse.json((data ?? []).map(m => ({ ...m, court_count: countMap[m.id] ?? 0 })))
 }
 
 export async function POST(req: Request) {

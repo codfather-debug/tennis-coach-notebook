@@ -106,6 +106,7 @@ export interface CourtState {
   weatherSnapshot: WeatherSnapshot | null
   startedAt: string | null
   isSaving: boolean
+  aiSummary: string | null
 }
 
 export interface Meet {

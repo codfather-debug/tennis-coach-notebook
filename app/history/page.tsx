@@ -24,6 +24,7 @@ export default async function HistoryPage() {
 
   const transformed = (matchesRes.data ?? []).map(m => ({
     ...m,
+    ai_summary: m.ai_summary ?? null,
     notes: (m.notes ?? []).map((n: any) => ({
       id: n.id,
       matchId: n.match_id,

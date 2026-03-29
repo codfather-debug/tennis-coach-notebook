@@ -26,15 +26,18 @@ const COURT_COLORS = [
   { bg: 'bg-amber-500',   text: 'text-amber-500' },
 ]
 
+const POSITIVE_TAGS = ['winner', 'ace', 'serve', 'net-play', 'highlight', 'great-decision', 'momentum']
+const NEGATIVE_TAGS = ['unforced-error', 'double-fault', 'forced-error', 'mental-lapse']
+
 interface Props { courtNumber: number }
 
 export default function CourtDetail({ courtNumber }: Props) {
-  const { courts, endMatch, clearCourt, deleteMatch, renamePlayer, setActiveCourt, courtCount, deleteNote } = useStore()
+  const { courts, endMatch, clearCourt, deleteMatch, renamePlayer, setActiveCourt, courtCount, deleteNote, saveAISummary } = useStore()
   const court = courts[courtNumber - 1]
   const [tab, setTab] = useState<'notes' | 'score'>('notes')
   const [confirmEnd, setConfirmEnd] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [summary, setSummary] = useState<string | null>(null)
+  const [summary, setSummary] = useState<string | null>(court.aiSummary ?? null)
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameValue, setNameValue] = useState('')
@@ -45,6 +48,7 @@ export default function CourtDetail({ courtNumber }: Props) {
   const [side, setSide] = useState<'serving' | 'returning' | null>(null)
   const touchStartX = useRef<number>(0)
   const touchStartY = useRef<number>(0)
+  const touchStartTime = useRef<number>(0)
 
   // Refs so cleanup always reads the latest values without stale closure
   const livePlayerRef = useRef(livePlayer)
@@ -58,9 +62,6 @@ export default function CourtDetail({ courtNumber }: Props) {
   const liveScoreCache = useRef<Map<number, { livePlayer: number | null; liveOpponent: number | null; side: 'serving' | 'returning' | null }>>(new Map())
 
   const hasLiveScore = livePlayer !== null && liveOpponent !== null
-
-  const POSITIVE_TAGS = ['winner', 'ace', 'serve', 'net-play', 'highlight', 'great-decision', 'momentum']
-  const NEGATIVE_TAGS = ['unforced-error', 'double-fault', 'forced-error', 'mental-lapse']
 
   const tally = useMemo(() => {
     const pos = court.notes.filter(n => n.tags.some(t => POSITIVE_TAGS.includes(t))).length
@@ -113,12 +114,16 @@ export default function CourtDetail({ courtNumber }: Props) {
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX
     touchStartY.current = e.touches[0].clientY
+    touchStartTime.current = Date.now()
   }
   function handleTouchEnd(e: React.TouchEvent) {
     const dx = e.changedTouches[0].clientX - touchStartX.current
     const dy = e.changedTouches[0].clientY - touchStartY.current
     if (Math.abs(dy) > Math.abs(dx)) return  // vertical scroll, not a swipe
     if (Math.abs(dx) < 60) return
+    const elapsed = Date.now() - touchStartTime.current
+    const velocity = Math.abs(dx) / elapsed  // px/ms
+    if (velocity < 0.3) return  // too slow — accidental drag
     if (dx < 0) goNext()
     else goPrev()
   }
@@ -137,7 +142,9 @@ export default function CourtDetail({ courtNumber }: Props) {
       }),
     })
     const data = await res.json()
-    setSummary(data.summary ?? data.error ?? 'Failed to generate summary')
+    const text = data.summary ?? data.error ?? 'Failed to generate summary'
+    setSummary(text)
+    if (data.summary) saveAISummary(courtNumber, text)
     setGeneratingSummary(false)
   }
 
@@ -415,6 +422,26 @@ export default function CourtDetail({ courtNumber }: Props) {
                   side={side}
                 />
                 <QuickLogPanel courtNumber={courtNumber} livePlayer={livePlayer} liveOpponent={liveOpponent} side={side} />
+              </div>
+            )}
+            {court.status === 'finished' && (
+              <div className="px-5 pt-4 flex-shrink-0 space-y-3">
+                {/* Compact score display */}
+                {court.sets.length > 0 && (
+                  <div className="bg-gray-900/60 border border-gray-800 rounded-xl px-4 py-2.5 flex items-center gap-3">
+                    <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold flex-shrink-0">Final</span>
+                    <span className="text-sm font-mono font-bold text-white">
+                      {court.sets.map(s => `${s.player}–${s.opponent}`).join('  ')}
+                    </span>
+                  </div>
+                )}
+                <NoteInput
+                  courtNumber={courtNumber}
+                  livePlayer={null}
+                  liveOpponent={null}
+                  side={null}
+                />
+                <QuickLogPanel courtNumber={courtNumber} livePlayer={null} liveOpponent={null} side={null} />
               </div>
             )}
             <div className="flex-1 overflow-y-auto px-5 py-3">

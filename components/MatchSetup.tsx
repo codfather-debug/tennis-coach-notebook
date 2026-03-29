@@ -22,12 +22,13 @@ interface RecentMatch {
 }
 
 export default function MatchSetup({ courtNumber }: Props) {
-  const { setupCourt } = useStore()
-  const [matchType, setMatchType] = useState<MatchType>('singles')
-  const [playerName, setPlayerName] = useState('')
-  const [playerName2, setPlayerName2] = useState('')
-  const [opponentName, setOpponentName] = useState('')
-  const [opponentName2, setOpponentName2] = useState('')
+  const { setupCourt, courtTemplates, clearCourtTemplate } = useStore()
+  const template = courtTemplates?.[courtNumber] ?? null
+  const [matchType, setMatchType] = useState<MatchType>(template?.matchType ?? 'singles')
+  const [playerName, setPlayerName] = useState(template?.playerName ?? '')
+  const [playerName2, setPlayerName2] = useState(template?.playerName2 ?? '')
+  const [opponentName, setOpponentName] = useState(template?.opponentName ?? '')
+  const [opponentName2, setOpponentName2] = useState(template?.opponentName2 ?? '')
   const [loading, setLoading] = useState(false)
   const [roster, setRoster] = useState<Player[]>([])
   const [recentMatch, setRecentMatch] = useState<RecentMatch | null>(null)
@@ -40,6 +41,8 @@ export default function MatchSetup({ courtNumber }: Props) {
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setRoster(data) })
       .catch(() => {})
+    // Load history for pre-filled player
+    if (template?.playerName) loadPlayerHistory(template.playerName)
   }, [])
 
   async function loadPlayerHistory(name: string) {
@@ -72,6 +75,7 @@ export default function MatchSetup({ courtNumber }: Props) {
       playerName2: matchType === 'doubles' ? playerName2.trim() : undefined,
       opponentName2: matchType === 'doubles' ? opponentName2.trim() : undefined,
     })
+    clearCourtTemplate(courtNumber)
     setLoading(false)
   }
 
@@ -100,6 +104,13 @@ export default function MatchSetup({ courtNumber }: Props) {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto bg-gray-950">
+      {/* Template banner */}
+      {template && (
+        <div className="mx-6 mt-4 bg-yellow-950/40 border border-yellow-700/40 rounded-xl px-4 py-2.5 flex items-center gap-2">
+          <span className="text-yellow-400 text-xs">📋</span>
+          <p className="text-yellow-300 text-xs font-medium">Pre-filled from last meet — edit as needed</p>
+        </div>
+      )}
       {/* Singles / Doubles toggle */}
       <div className="flex-shrink-0 flex gap-1 mx-6 mt-6 mb-6 bg-gray-900 p-1 rounded-xl">
         {(['singles', 'doubles'] as MatchType[]).map(t => (

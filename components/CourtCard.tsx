@@ -74,7 +74,7 @@ export default function CourtCard({ courtNumber, mini }: Props) {
         onClick={() => setActiveCourt(courtNumber)}
         className={clsx(
           'relative flex-shrink-0 text-left border-r border-black/20 p-2 transition-all overflow-hidden',
-          isActive ? `${color.active} w-24` : `${color.inactive} w-20 opacity-60 hover:opacity-90`
+          isActive ? `${color.active} w-24` : court.status === 'empty' ? `bg-gray-900 w-20 opacity-25 hover:opacity-50` : `${color.inactive} w-20 opacity-60 hover:opacity-90`
         )}
       >
         {/* Watermark on active court */}

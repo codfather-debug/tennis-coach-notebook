@@ -20,6 +20,7 @@ function emptyCourtState(courtNumber: number): CourtState {
     weatherSnapshot: null,
     startedAt: null,
     isSaving: false,
+    aiSummary: null,
   }
 }
 
@@ -31,6 +32,14 @@ interface SetupOpts {
   opponentName2?: string
 }
 
+export interface CourtTemplate {
+  playerName: string
+  playerName2: string
+  opponentName: string
+  opponentName2: string
+  matchType: MatchType
+}
+
 interface AppStore {
   courts: CourtState[]
   activeCourt: number | null
@@ -39,17 +48,21 @@ interface AppStore {
   coachId: string | null
   activeMeetId: string | null
   activeMeetName: string | null
+  courtTemplates: Record<number, CourtTemplate> | null
 
   setCoachId: (id: string) => void
   setActiveCourt: (court: number | null) => void
   setCourtCount: (n: number) => void
   setWeather: (w: WeatherSnapshot) => void
   loadWeather: () => Promise<void>
+  setCourtTemplates: (templates: Record<number, CourtTemplate> | null) => void
+  clearCourtTemplate: (courtNumber: number) => void
 
   createMeet: (name: string) => Promise<void>
   endMeet: () => Promise<void>
   deleteMeet: (id: string, deleteMatches?: boolean) => Promise<void>
 
+  saveAISummary: (courtNumber: number, summary: string) => Promise<void>
   setupCourt: (courtNumber: number, opts: SetupOpts) => Promise<void>
   updateSet: (courtNumber: number, setIndex: number, side: 'player' | 'opponent', value: number) => void
   updateTiebreak: (courtNumber: number, setIndex: number, side: 'player' | 'opponent', value: number) => void
@@ -73,6 +86,7 @@ export const useStore = create<AppStore>()(
     coachId: null,
     activeMeetId: null,
     activeMeetName: null,
+    courtTemplates: null,
 
     setCoachId: (id) => set((s) => { s.coachId = id }),
 
@@ -81,6 +95,12 @@ export const useStore = create<AppStore>()(
     setCourtCount: (n) => set((s) => { s.courtCount = n }),
 
     setWeather: (w) => set((s) => { s.weather = w }),
+
+    setCourtTemplates: (templates) => set((s) => { s.courtTemplates = templates }),
+
+    clearCourtTemplate: (courtNumber) => set((s) => {
+      if (s.courtTemplates) delete s.courtTemplates[courtNumber]
+    }),
 
     loadWeather: async () => {
       const snap = await getLocationAndWeather()
@@ -107,13 +127,25 @@ export const useStore = create<AppStore>()(
     endMeet: async () => {
       const { courts } = get()
       const toEnd = courts.filter(c => c.status === 'active')
+      const toClean = courts.filter(c => c.status === 'finished')
       for (const court of toEnd) {
         await get().endMatch(court.courtNumber)
+      }
+      for (const court of [...toEnd, ...toClean]) {
+        get().clearCourt(court.courtNumber)
       }
       set((s) => {
         s.activeMeetId = null
         s.activeMeetName = null
       })
+    },
+
+    saveAISummary: async (courtNumber, summary) => {
+      set((s) => { s.courts[courtNumber - 1].aiSummary = summary })
+      const court = get().courts[courtNumber - 1]
+      if (!court.matchId) return
+      const supabase = createClient()
+      await supabase.from('matches').update({ ai_summary: summary }).eq('id', court.matchId)
     },
 
     deleteMeet: async (id, deleteMatches = false) => {
@@ -265,8 +297,11 @@ export const useStore = create<AppStore>()(
         weather_snapshot: court.weatherSnapshot,
       }).eq('id', court.matchId)
 
-      // Save complete — clear court so it's ready for next match
-      set((s) => { s.courts[courtNumber - 1] = emptyCourtState(courtNumber) })
+      // Mark finished locally so the post-match UI renders; call clearCourt to reset
+      set((s) => {
+        s.courts[courtNumber - 1].status = 'finished'
+        s.courts[courtNumber - 1].isSaving = false
+      })
     },
 
     deleteMatch: async (courtNumber) => {
@@ -330,6 +365,7 @@ export const useStore = create<AppStore>()(
             weatherSnapshot: m.weather_snapshot,
             startedAt: m.started_at,
             isSaving: false,
+            aiSummary: m.ai_summary ?? null,
           }
         }
       })

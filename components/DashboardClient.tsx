@@ -157,22 +157,22 @@ export default function DashboardClient({ coachId }: Props) {
         </div>
 
         {/* Row 2: Players + History + Create Meet */}
-        <div className="flex gap-2 px-4 pb-2">
+        <div className="flex gap-2 px-4 pb-3">
           <Link
             href="/players"
-            className="flex-1 text-center text-xs text-gray-400 hover:text-white transition py-1.5 rounded-lg hover:bg-gray-800 bg-gray-800/40"
+            className="flex-1 text-center text-sm text-gray-300 hover:text-white transition py-3 rounded-xl hover:bg-gray-800 bg-gray-800/40 font-medium"
           >
             Players
           </Link>
           <Link
             href="/history"
-            className="flex-1 text-center text-xs text-gray-400 hover:text-white transition py-1.5 rounded-lg hover:bg-gray-800 bg-gray-800/40"
+            className="flex-1 text-center text-sm text-gray-300 hover:text-white transition py-3 rounded-xl hover:bg-gray-800 bg-gray-800/40 font-medium"
           >
             History
           </Link>
           <button
             onClick={() => setActiveCourt(null)}
-            className="flex-1 text-center text-xs text-green-400 hover:text-green-300 transition py-1.5 rounded-lg hover:bg-green-900/30 bg-green-900/20 font-semibold"
+            className="flex-1 text-center text-sm text-green-400 hover:text-green-300 transition py-3 rounded-xl hover:bg-green-900/30 bg-green-900/20 font-semibold"
           >
             + Meet
           </button>

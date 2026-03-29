@@ -46,13 +46,40 @@ export default function CourtDetail({ courtNumber }: Props) {
   const touchStartX = useRef<number>(0)
   const touchStartY = useRef<number>(0)
 
+  // Refs so cleanup always reads the latest values without stale closure
+  const livePlayerRef = useRef(livePlayer)
+  const liveOpponentRef = useRef(liveOpponent)
+  const sideRef = useRef(side)
+  livePlayerRef.current = livePlayer
+  liveOpponentRef.current = liveOpponent
+  sideRef.current = side
+
+  // Per-court live score cache: save on leave, restore or init from set score on arrive
+  const liveScoreCache = useRef<Map<number, { livePlayer: number | null; liveOpponent: number | null; side: 'serving' | 'returning' | null }>>(new Map())
+
   const hasLiveScore = livePlayer !== null && liveOpponent !== null
 
-  // Reset live score state when switching courts
   useEffect(() => {
-    setLivePlayer(null)
-    setLiveOpponent(null)
-    setSide(null)
+    const cached = liveScoreCache.current.get(courtNumber)
+    if (cached) {
+      setLivePlayer(cached.livePlayer)
+      setLiveOpponent(cached.liveOpponent)
+      setSide(cached.side)
+    } else {
+      // Init from the current set score
+      const sets = courts[courtNumber - 1]?.sets ?? []
+      const lastSet = sets[sets.length - 1]
+      setLivePlayer(lastSet?.player ?? null)
+      setLiveOpponent(lastSet?.opponent ?? null)
+      setSide(null)
+    }
+    return () => {
+      liveScoreCache.current.set(courtNumber, {
+        livePlayer: livePlayerRef.current,
+        liveOpponent: liveOpponentRef.current,
+        side: sideRef.current,
+      })
+    }
   }, [courtNumber])
 
   useEffect(() => {
@@ -372,13 +399,13 @@ export default function CourtDetail({ courtNumber }: Props) {
                   </div>
                 </div>
 
-                <QuickLogPanel courtNumber={courtNumber} livePlayer={livePlayer} liveOpponent={liveOpponent} side={side} />
                 <NoteInput
                   courtNumber={courtNumber}
                   livePlayer={livePlayer}
                   liveOpponent={liveOpponent}
                   side={side}
                 />
+                <QuickLogPanel courtNumber={courtNumber} livePlayer={livePlayer} liveOpponent={liveOpponent} side={side} />
               </div>
             )}
             <div className="flex-1 overflow-y-auto px-5 py-3">

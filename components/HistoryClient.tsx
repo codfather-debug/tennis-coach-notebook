@@ -173,13 +173,13 @@ export default function HistoryClient({ matches: initialMatches, meets: initialM
             ← Back
           </button>
         ) : (
-          <Link href="/dashboard" className="text-gray-400 hover:text-white transition text-sm">← Dashboard</Link>
+          <Link href="/dashboard" className="text-gray-300 hover:text-white transition text-sm font-medium bg-gray-800/50 hover:bg-gray-700 px-4 py-2.5 rounded-xl">← Dashboard</Link>
         )}
         <h1 className="text-white font-bold">
           {showDetail && selected ? selected.player_name : 'Match History'}
         </h1>
         {!showDetail && (
-          <Link href="/dashboard" className="ml-auto text-gray-400 hover:text-white transition text-sm hidden lg:block">← Dashboard</Link>
+          <Link href="/dashboard" className="ml-auto text-gray-300 hover:text-white transition text-sm font-medium bg-gray-800/50 hover:bg-gray-700 px-4 py-2.5 rounded-xl hidden lg:block">← Dashboard</Link>
         )}
       </header>
 

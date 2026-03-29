@@ -100,7 +100,7 @@ export default function PlayersClient({ initialPlayers }: Props) {
       <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-gray-400 hover:text-white transition text-sm">← Dashboard</Link>
+            <Link href="/dashboard" className="text-gray-300 hover:text-white transition text-sm font-medium bg-gray-800/50 hover:bg-gray-700 px-4 py-2.5 rounded-xl">← Dashboard</Link>
             <h1 className="text-white font-bold">Player Roster</h1>
           </div>
           <button
@@ -121,6 +121,8 @@ export default function PlayersClient({ initialPlayers }: Props) {
           <a
             href="/roster-template.csv"
             download
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex-1 text-center text-xs text-gray-400 hover:text-white transition py-1.5 rounded-lg hover:bg-gray-800 bg-gray-800/40"
           >
             ↓ Download Template

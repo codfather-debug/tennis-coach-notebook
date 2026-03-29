@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useStore } from '@/lib/store'
 import ScoreInput from './ScoreInput'
 import NoteInput from './NoteInput'
@@ -29,7 +29,7 @@ const COURT_COLORS = [
 interface Props { courtNumber: number }
 
 export default function CourtDetail({ courtNumber }: Props) {
-  const { courts, endMatch, clearCourt, deleteMatch, renamePlayer, setActiveCourt, courtCount } = useStore()
+  const { courts, endMatch, clearCourt, deleteMatch, renamePlayer, setActiveCourt, courtCount, deleteNote } = useStore()
   const court = courts[courtNumber - 1]
   const [tab, setTab] = useState<'notes' | 'score'>('notes')
   const [confirmEnd, setConfirmEnd] = useState(false)
@@ -58,6 +58,15 @@ export default function CourtDetail({ courtNumber }: Props) {
   const liveScoreCache = useRef<Map<number, { livePlayer: number | null; liveOpponent: number | null; side: 'serving' | 'returning' | null }>>(new Map())
 
   const hasLiveScore = livePlayer !== null && liveOpponent !== null
+
+  const POSITIVE_TAGS = ['winner', 'ace', 'serve', 'net-play', 'highlight', 'great-decision', 'momentum']
+  const NEGATIVE_TAGS = ['unforced-error', 'double-fault', 'forced-error', 'mental-lapse']
+
+  const tally = useMemo(() => {
+    const pos = court.notes.filter(n => n.tags.some(t => POSITIVE_TAGS.includes(t))).length
+    const neg = court.notes.filter(n => n.tags.some(t => NEGATIVE_TAGS.includes(t))).length
+    return { pos, neg, total: court.notes.length }
+  }, [court.notes])
 
   useEffect(() => {
     const cached = liveScoreCache.current.get(courtNumber)
@@ -409,7 +418,14 @@ export default function CourtDetail({ courtNumber }: Props) {
               </div>
             )}
             <div className="flex-1 overflow-y-auto px-5 py-3">
-              <NoteList notes={court.notes} />
+              {court.notes.length > 0 && (
+                <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-800">
+                  <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">{tally.total} notes</span>
+                  <span className="text-xs font-bold text-green-400">✅ {tally.pos}</span>
+                  <span className="text-xs font-bold text-red-400">⚠️ {tally.neg}</span>
+                </div>
+              )}
+              <NoteList notes={court.notes} onDelete={(id) => deleteNote(courtNumber, id)} />
             </div>
           </div>
         )}
@@ -417,6 +433,23 @@ export default function CourtDetail({ courtNumber }: Props) {
 
       {court.status === 'finished' && (
         <div className="px-5 py-4 border-t border-gray-800 flex-shrink-0 space-y-2">
+          {/* Quick stats */}
+          {court.notes.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 mb-1">
+              <div className="bg-gray-900 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-white">{tally.total}</p>
+                <p className="text-xs text-gray-500 mt-0.5">Notes</p>
+              </div>
+              <div className="bg-green-950/40 border border-green-800/40 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-green-400">{tally.pos}</p>
+                <p className="text-xs text-green-600 mt-0.5">Positive</p>
+              </div>
+              <div className="bg-red-950/40 border border-red-800/40 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-red-400">{tally.neg}</p>
+                <p className="text-xs text-red-600 mt-0.5">Errors</p>
+              </div>
+            </div>
+          )}
           <button
             onClick={handleGenerateSummary}
             disabled={generatingSummary}

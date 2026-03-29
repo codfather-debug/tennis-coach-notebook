@@ -56,6 +56,7 @@ interface AppStore {
   addSet: (courtNumber: number) => void
   removeSet: (courtNumber: number, setIndex: number) => void
   addNote: (courtNumber: number, content: string, tags: NoteTag[]) => Promise<void>
+  deleteNote: (courtNumber: number, noteId: string) => Promise<void>
   endMatch: (courtNumber: number) => Promise<void>
   deleteMatch: (courtNumber: number) => Promise<void>
   clearCourt: (courtNumber: number) => void
@@ -214,6 +215,14 @@ export const useStore = create<AppStore>()(
         const court = s.courts[courtNumber - 1]
         court.sets.splice(setIndex, 1)
       })
+    },
+
+    deleteNote: async (courtNumber, noteId) => {
+      set((s) => {
+        s.courts[courtNumber - 1].notes = s.courts[courtNumber - 1].notes.filter(n => n.id !== noteId)
+      })
+      const supabase = createClient()
+      await supabase.from('notes').delete().eq('id', noteId)
     },
 
     addNote: async (courtNumber, content, tags) => {

@@ -15,6 +15,14 @@ function HomeScreen() {
   const [meetName, setMeetName] = useState('')
   const [localCourtCount, setLocalCourtCount] = useState(4)
   const [loading, setLoading] = useState(false)
+  const [recentMeets, setRecentMeets] = useState<{ id: string; name: string; court_count?: number }[]>([])
+
+  useEffect(() => {
+    fetch('/api/meets')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setRecentMeets(data.slice(0, 3)) })
+      .catch(() => {})
+  }, [])
 
   async function handleStart(e: React.FormEvent) {
     e.preventDefault()
@@ -51,6 +59,24 @@ function HomeScreen() {
           <h1 className="text-white font-black text-3xl mb-1">Coach Notebook</h1>
           <p className="text-gray-500 text-sm">Ready to track your courts</p>
         </div>
+
+        {recentMeets.length > 0 && (
+          <div className="space-y-2 mb-6">
+            <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Repeat a recent meet</p>
+            <div className="flex flex-col gap-2">
+              {recentMeets.map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => { setMeetName(m.name) }}
+                  className="w-full text-left bg-gray-800/60 hover:bg-gray-800 border border-gray-700 hover:border-gray-600 rounded-xl px-4 py-3 transition"
+                >
+                  <p className="text-white text-sm font-semibold">📋 {m.name}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleStart} className="space-y-6">
           <div className="space-y-2">

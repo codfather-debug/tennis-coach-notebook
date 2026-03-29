@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
+import { createClient } from '@/lib/supabase'
 import clsx from 'clsx'
 import type { MatchType } from '@/types'
 
@@ -12,6 +13,14 @@ interface Player {
   email: string | null
 }
 
+interface RecentMatch {
+  opponent_name: string
+  sets: { player: number; opponent: number }[]
+  pos: number
+  neg: number
+  total: number
+}
+
 export default function MatchSetup({ courtNumber }: Props) {
   const { setupCourt } = useStore()
   const [matchType, setMatchType] = useState<MatchType>('singles')
@@ -21,6 +30,10 @@ export default function MatchSetup({ courtNumber }: Props) {
   const [opponentName2, setOpponentName2] = useState('')
   const [loading, setLoading] = useState(false)
   const [roster, setRoster] = useState<Player[]>([])
+  const [recentMatch, setRecentMatch] = useState<RecentMatch | null>(null)
+
+  const POSITIVE_TAGS = ['winner', 'ace', 'serve', 'net-play', 'highlight', 'great-decision', 'momentum']
+  const NEGATIVE_TAGS = ['unforced-error', 'double-fault', 'forced-error', 'mental-lapse']
 
   useEffect(() => {
     fetch('/api/players')
@@ -28,6 +41,24 @@ export default function MatchSetup({ courtNumber }: Props) {
       .then(data => { if (Array.isArray(data)) setRoster(data) })
       .catch(() => {})
   }, [])
+
+  async function loadPlayerHistory(name: string) {
+    if (!name.trim()) { setRecentMatch(null); return }
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('matches')
+      .select('opponent_name, sets, notes(tags)')
+      .eq('player_name', name)
+      .eq('status', 'finished')
+      .order('ended_at', { ascending: false })
+      .limit(1)
+    if (!data?.length) { setRecentMatch(null); return }
+    const m = data[0]
+    const notes: { tags: string[] }[] = (m.notes as any[]) ?? []
+    const pos = notes.filter(n => n.tags?.some((t: string) => POSITIVE_TAGS.includes(t))).length
+    const neg = notes.filter(n => n.tags?.some((t: string) => NEGATIVE_TAGS.includes(t))).length
+    setRecentMatch({ opponent_name: m.opponent_name, sets: m.sets ?? [], pos, neg, total: notes.length })
+  }
 
   async function handleStart(e: React.FormEvent) {
     e.preventDefault()
@@ -52,7 +83,7 @@ export default function MatchSetup({ courtNumber }: Props) {
           <button
             key={p.id}
             type="button"
-            onClick={() => onSelect(p.name)}
+            onClick={() => { onSelect(p.name); loadPlayerHistory(p.name) }}
             className={clsx(
               'text-sm px-4 py-2 rounded-full border transition font-medium',
               selected === p.name
@@ -95,11 +126,26 @@ export default function MatchSetup({ courtNumber }: Props) {
           <RosterChips onSelect={setPlayerName} selected={playerName} />
           <input
             value={playerName}
-            onChange={e => setPlayerName(e.target.value)}
+            onChange={e => { setPlayerName(e.target.value); loadPlayerHistory(e.target.value) }}
             placeholder={matchType === 'doubles' ? 'Player 1' : 'Player name'}
             required
             className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition"
           />
+          {recentMatch && (
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-3 space-y-1">
+              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Last match</p>
+              <p className="text-sm text-gray-300">
+                vs {recentMatch.opponent_name || 'Unknown'}{recentMatch.sets.length ? ' · ' + recentMatch.sets.map(s => `${s.player}–${s.opponent}`).join(' ') : ''}
+              </p>
+              {recentMatch.total > 0 && (
+                <div className="flex gap-3 pt-0.5">
+                  <span className="text-xs text-green-400 font-semibold">✅ {recentMatch.pos} positive</span>
+                  <span className="text-xs text-red-400 font-semibold">⚠️ {recentMatch.neg} errors</span>
+                  <span className="text-xs text-gray-500">{recentMatch.total} notes</span>
+                </div>
+              )}
+            </div>
+          )}
           {matchType === 'doubles' && (
             <>
               <RosterChips onSelect={setPlayerName2} selected={playerName2} />

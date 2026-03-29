@@ -185,16 +185,22 @@ export default function DashboardClient({ coachId }: Props) {
             <span className="text-xs text-yellow-400">📋</span>
             <span className="text-xs font-semibold text-yellow-300 truncate">{activeMeetName}</span>
             {confirmDeleteMeet ? (
-              <div className="ml-auto flex gap-1">
+              <div className="ml-auto flex flex-col gap-1 items-end">
                 <button
-                  onClick={async () => { await deleteMeet(activeMeetId); setConfirmDeleteMeet(false) }}
-                  className="text-xs bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded transition"
+                  onClick={() => { deleteMeet(activeMeetId, true); setConfirmDeleteMeet(false) }}
+                  className="text-xs bg-red-600 hover:bg-red-500 text-white px-2 py-1.5 rounded transition whitespace-nowrap"
                 >
-                  Delete?
+                  Delete meet + all records
+                </button>
+                <button
+                  onClick={() => { deleteMeet(activeMeetId, false); setConfirmDeleteMeet(false) }}
+                  className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1.5 rounded transition whitespace-nowrap"
+                >
+                  Delete meet only
                 </button>
                 <button
                   onClick={() => setConfirmDeleteMeet(false)}
-                  className="text-xs text-gray-500 hover:text-white px-2 py-1 rounded hover:bg-gray-800 transition"
+                  className="text-xs text-gray-500 hover:text-white px-2 py-1 rounded transition"
                 >
                   Cancel
                 </button>

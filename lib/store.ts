@@ -48,7 +48,7 @@ interface AppStore {
 
   createMeet: (name: string) => Promise<void>
   endMeet: () => Promise<void>
-  deleteMeet: (id: string) => Promise<void>
+  deleteMeet: (id: string, deleteMatches?: boolean) => Promise<void>
 
   setupCourt: (courtNumber: number, opts: SetupOpts) => Promise<void>
   updateSet: (courtNumber: number, setIndex: number, side: 'player' | 'opponent', value: number) => void
@@ -115,11 +115,11 @@ export const useStore = create<AppStore>()(
       })
     },
 
-    deleteMeet: async (id) => {
+    deleteMeet: async (id, deleteMatches = false) => {
       await fetch('/api/meets', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, deleteMatches }),
       })
       const { activeMeetId } = get()
       if (activeMeetId === id) {

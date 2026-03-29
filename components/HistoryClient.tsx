@@ -61,13 +61,18 @@ export default function HistoryClient({ matches: initialMatches, meets: initialM
     if (selectedId === id) setSelectedId(null)
   }
 
-  async function handleDeleteMeet(id: string) {
+  async function handleDeleteMeet(id: string, deleteMatches: boolean) {
     await fetch('/api/meets', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, deleteMatches }),
     })
     setMeetList(prev => prev.filter(m => m.id !== id))
+    if (deleteMatches) {
+      setMatches(prev => prev.filter(m => m.meet_id !== id))
+    } else {
+      setMatches(prev => prev.map(m => m.meet_id === id ? { ...m, meet_id: null } : m))
+    }
     setConfirmDeleteMeetId(null)
   }
 
@@ -223,16 +228,22 @@ export default function HistoryClient({ matches: initialMatches, meets: initialM
                     <span className="text-yellow-600 text-xs mr-2">{isExpanded ? '▲' : '▼'}</span>
                   </button>
                   {confirmDeleteMeetId === meet.id ? (
-                    <div className="flex gap-1 pr-2">
+                    <div className="flex flex-col gap-1 pr-2 py-1 items-end">
                       <button
-                        onClick={() => handleDeleteMeet(meet.id)}
-                        className="text-xs bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded transition"
+                        onClick={() => handleDeleteMeet(meet.id, true)}
+                        className="text-xs bg-red-600 hover:bg-red-500 text-white px-2 py-1.5 rounded transition whitespace-nowrap"
                       >
-                        Delete?
+                        Delete meet + all records
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMeet(meet.id, false)}
+                        className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1.5 rounded transition whitespace-nowrap"
+                      >
+                        Delete meet only
                       </button>
                       <button
                         onClick={() => setConfirmDeleteMeetId(null)}
-                        className="text-xs text-gray-500 hover:text-white px-2 py-1 rounded hover:bg-gray-800 transition"
+                        className="text-xs text-gray-500 hover:text-white px-1 py-0.5 rounded transition"
                       >
                         Cancel
                       </button>

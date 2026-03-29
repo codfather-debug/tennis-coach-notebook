@@ -36,7 +36,16 @@ export async function DELETE(req: Request) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id } = await req.json()
+  const { id, deleteMatches } = await req.json()
+
+  if (deleteMatches) {
+    // Delete all matches belonging to this meet first
+    await supabase.from('matches').delete().eq('meet_id', id).eq('coach_id', session.user.id)
+  } else {
+    // Unlink matches so they remain in history without the meet grouping
+    await supabase.from('matches').update({ meet_id: null }).eq('meet_id', id).eq('coach_id', session.user.id)
+  }
+
   await supabase.from('meets').delete().eq('id', id).eq('coach_id', session.user.id)
   return NextResponse.json({ ok: true })
 }

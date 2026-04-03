@@ -36,6 +36,7 @@ const SECTIONS: Section[] = [
     activeText: 'text-green-200',
     flashBg: 'bg-green-500',
     entries: [
+      { label: 'Ace',          content: 'Ace',                 tags: ['ace', 'serve'] },
       { label: 'FH Winner',    content: 'FH Winner',           tags: ['winner', 'forehand'] },
       { label: 'BH Solid',     content: 'BH Solid',            tags: ['winner', 'backhand'] },
       { label: '1st Serve In', content: '1st Serve In',        tags: ['serve'] },

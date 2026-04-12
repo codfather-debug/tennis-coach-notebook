@@ -166,9 +166,18 @@ export default function NoteInput({ courtNumber, livePlayer, liveOpponent, side 
       {/* Sub-options for Winner or Unforced Error */}
       {subExpanded && (
         <div className={clsx('rounded-xl border p-3 space-y-2', subColor.other.split(' ')[0])}>
-          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">
-            {subExpanded === 'winner' ? 'Winner type' : 'Error type'}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">
+              {subExpanded === 'winner' ? 'Winner type' : 'Error type'}
+            </p>
+            <button
+              type="button"
+              onClick={() => { setSubExpanded(null); textareaRef.current?.focus() }}
+              className="text-xs text-gray-500 hover:text-white transition px-2 py-0.5 rounded"
+            >
+              Skip →
+            </button>
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {subs.map(sub => (
               sub === 'Other' ? (

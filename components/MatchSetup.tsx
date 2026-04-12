@@ -130,8 +130,14 @@ export default function MatchSetup({ courtNumber }: Props) {
 
       <form onSubmit={handleStart} className="flex flex-col flex-1 px-6 gap-5">
         {/* Your side */}
-        <div className="space-y-2">
-          <label className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+        <div className={clsx(
+          'space-y-2',
+          matchType === 'doubles' && 'bg-green-950/30 border border-green-800/40 rounded-xl p-3'
+        )}>
+          <label className={clsx(
+            'text-xs uppercase tracking-wider font-semibold',
+            matchType === 'doubles' ? 'text-green-400' : 'text-gray-500'
+          )}>
             {matchType === 'doubles' ? 'Your Team' : 'Your Player'}
           </label>
           <RosterChips onSelect={setPlayerName} selected={playerName} />
@@ -172,8 +178,14 @@ export default function MatchSetup({ courtNumber }: Props) {
         </div>
 
         {/* Opponent side */}
-        <div className="space-y-2">
-          <label className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+        <div className={clsx(
+          'space-y-2',
+          matchType === 'doubles' && 'bg-red-950/30 border border-red-800/40 rounded-xl p-3'
+        )}>
+          <label className={clsx(
+            'text-xs uppercase tracking-wider font-semibold',
+            matchType === 'doubles' ? 'text-red-400' : 'text-gray-500'
+          )}>
             {matchType === 'doubles' ? 'Opponents' : 'Opponent'}
           </label>
           <input

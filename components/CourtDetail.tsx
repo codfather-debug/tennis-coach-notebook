@@ -7,6 +7,7 @@ import NoteList from './NoteList'
 import MatchSetup from './MatchSetup'
 import WeatherWidget from './WeatherWidget'
 import QuickLogPanel from './QuickLogPanel'
+import DoublesServingPanel, { DoublesState } from './DoublesServingPanel'
 import clsx from 'clsx'
 
 const COURT_COLORS = [
@@ -46,6 +47,10 @@ export default function CourtDetail({ courtNumber }: Props) {
   const [livePlayer, setLivePlayer] = useState<number | null>(null)
   const [liveOpponent, setLiveOpponent] = useState<number | null>(null)
   const [side, setSide] = useState<'serving' | 'returning' | null>(null)
+  const [doublesState, setDoublesState] = useState<DoublesState | null>(null)
+  const doublesStateRef = useRef<DoublesState | null>(null)
+  doublesStateRef.current = doublesState
+  const doublesStateCache = useRef<Map<number, DoublesState | null>>(new Map())
   const touchStartX = useRef<number>(0)
   const touchStartY = useRef<number>(0)
   const touchStartTime = useRef<number>(0)
@@ -83,12 +88,33 @@ export default function CourtDetail({ courtNumber }: Props) {
       setLiveOpponent(lastSet?.opponent ?? null)
       setSide(null)
     }
+    // Doubles state: restore from cache or init fresh
+    const court = courts[courtNumber - 1]
+    if (court.matchType === 'doubles' && court.status === 'active') {
+      const cachedDoubles = doublesStateCache.current.get(courtNumber)
+      if (cachedDoubles !== undefined) {
+        setDoublesState(cachedDoubles)
+      } else {
+        setDoublesState({
+          servingTeam: 1,
+          team1ServerIdx: 0,
+          team2ServerIdx: 0,
+          team2DeuceIdx: null,
+          team1DeuceIdx: null,
+          gameInSet: 1,
+          step: 'server-team',
+        })
+      }
+    } else {
+      setDoublesState(null)
+    }
     return () => {
       liveScoreCache.current.set(courtNumber, {
         livePlayer: livePlayerRef.current,
         liveOpponent: liveOpponentRef.current,
         side: sideRef.current,
       })
+      doublesStateCache.current.set(courtNumber, doublesStateRef.current)
     }
   }, [courtNumber])
 
@@ -127,6 +153,38 @@ export default function CourtDetail({ courtNumber }: Props) {
     if (dx < 0) goNext()
     else goPrev()
   }
+
+  function handleNewGame() {
+    setDoublesState(prev => {
+      if (!prev) return prev
+      const newTeam1ServerIdx: 0 | 1 = prev.servingTeam === 1
+        ? (((prev.team1ServerIdx + 1) % 2) as 0 | 1)
+        : prev.team1ServerIdx
+      const newTeam2ServerIdx: 0 | 1 = prev.servingTeam === 2
+        ? (((prev.team2ServerIdx + 1) % 2) as 0 | 1)
+        : prev.team2ServerIdx
+      const newServingTeam: 1 | 2 = prev.servingTeam === 1 ? 2 : 1
+      return { ...prev, servingTeam: newServingTeam, team1ServerIdx: newTeam1ServerIdx, team2ServerIdx: newTeam2ServerIdx, gameInSet: prev.gameInSet + 1 }
+    })
+  }
+
+  function handleNewSet() {
+    setDoublesState({
+      servingTeam: 1,
+      team1ServerIdx: 0,
+      team2ServerIdx: 0,
+      team2DeuceIdx: null,
+      team1DeuceIdx: null,
+      gameInSet: 1,
+      step: 'server-team',
+    })
+  }
+
+  // For doubles, derive serving side from doublesState; for singles use manual toggle
+  const effectiveSide: 'serving' | 'returning' | null =
+    court.matchType === 'doubles' && doublesState?.step === 'ready'
+      ? (doublesState.servingTeam === 1 ? 'serving' : 'returning')
+      : court.matchType === 'singles' ? side : null
 
   async function handleGenerateSummary() {
     setGeneratingSummary(true)
@@ -395,33 +453,57 @@ export default function CourtDetail({ courtNumber }: Props) {
                     )}>
                       {hasLiveScore ? `${livePlayer}–${liveOpponent}` : '–'}
                     </span>
-                    <div className="flex gap-2">
-                      {(['serving', 'returning'] as const).map(s => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setSide(prev => prev === s ? null : s)}
-                          className={clsx(
-                            'flex-1 text-sm px-4 py-2.5 rounded-xl border transition font-semibold capitalize',
-                            side === s
-                              ? 'bg-yellow-600/40 text-yellow-200 border-yellow-500/60'
-                              : 'bg-gray-800/60 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500'
-                          )}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
+                    {court.matchType === 'singles' && (
+                      <div className="flex gap-2">
+                        {(['serving', 'returning'] as const).map(s => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setSide(prev => prev === s ? null : s)}
+                            className={clsx(
+                              'flex-1 text-sm px-4 py-2.5 rounded-xl border transition font-semibold capitalize',
+                              side === s
+                                ? 'bg-yellow-600/40 text-yellow-200 border-yellow-500/60'
+                                : 'bg-gray-800/60 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                            )}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {court.matchType === 'doubles' && doublesState?.step === 'ready' && (
+                      <span className={clsx(
+                        'text-xs font-semibold px-2 py-1 rounded-lg',
+                        doublesState.servingTeam === 1
+                          ? 'bg-green-900/40 text-green-300'
+                          : 'bg-red-900/40 text-red-300'
+                      )}>
+                        {doublesState.servingTeam === 1 ? 'Serving' : 'Returning'}
+                      </span>
+                    )}
                   </div>
                 </div>
 
+                {court.matchType === 'doubles' && doublesState && (
+                  <DoublesServingPanel
+                    player1={court.playerName}
+                    player2={court.playerName2}
+                    opp1={court.opponentName}
+                    opp2={court.opponentName2}
+                    state={doublesState}
+                    onStateChange={setDoublesState}
+                    onNewGame={handleNewGame}
+                    onNewSet={handleNewSet}
+                  />
+                )}
                 <NoteInput
                   courtNumber={courtNumber}
                   livePlayer={livePlayer}
                   liveOpponent={liveOpponent}
-                  side={side}
+                  side={effectiveSide}
                 />
-                <QuickLogPanel courtNumber={courtNumber} livePlayer={livePlayer} liveOpponent={liveOpponent} side={side} />
+                <QuickLogPanel courtNumber={courtNumber} livePlayer={livePlayer} liveOpponent={liveOpponent} side={effectiveSide} />
               </div>
             )}
             {court.status === 'finished' && (

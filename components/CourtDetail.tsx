@@ -8,6 +8,7 @@ import MatchSetup from './MatchSetup'
 import WeatherWidget from './WeatherWidget'
 import QuickLogPanel from './QuickLogPanel'
 import DoublesServingPanel, { DoublesState } from './DoublesServingPanel'
+import PointLogPanel from './PointLogPanel'
 import clsx from 'clsx'
 
 const COURT_COLORS = [
@@ -497,6 +498,16 @@ export default function CourtDetail({ courtNumber }: Props) {
                     onNewSet={handleNewSet}
                   />
                 )}
+                <PointLogPanel
+                  courtNumber={courtNumber}
+                  player1={court.playerName}
+                  player2={court.playerName2}
+                  opp1={court.opponentName}
+                  opp2={court.opponentName2}
+                  isDoubles={court.matchType === 'doubles'}
+                  livePlayer={livePlayer}
+                  liveOpponent={liveOpponent}
+                />
                 <NoteInput
                   courtNumber={courtNumber}
                   livePlayer={livePlayer}

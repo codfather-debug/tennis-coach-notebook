@@ -130,7 +130,7 @@ export default function MatchSetup({ courtNumber }: Props) {
 
       <form onSubmit={handleStart} className="flex flex-col flex-1 px-6 gap-5">
         {/* Your side */}
-        <div className="space-y-2 bg-green-950/30 border border-green-800/40 rounded-xl p-3">
+        <div className="space-y-2 bg-green-900/40 border border-green-600/60 rounded-xl p-3">
           <label className="text-xs uppercase tracking-wider font-semibold text-green-400">
             {matchType === 'doubles' ? 'Your Team' : 'Your Player'}
           </label>
@@ -172,7 +172,7 @@ export default function MatchSetup({ courtNumber }: Props) {
         </div>
 
         {/* Opponent side */}
-        <div className="space-y-2 bg-red-950/30 border border-red-800/40 rounded-xl p-3">
+        <div className="space-y-2 bg-red-900/40 border border-red-600/60 rounded-xl p-3">
           <label className="text-xs uppercase tracking-wider font-semibold text-red-400">
             {matchType === 'doubles' ? 'Opponents' : 'Opponent'}
           </label>

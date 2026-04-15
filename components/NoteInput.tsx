@@ -11,6 +11,8 @@ interface Props {
   livePlayer: number | null
   liveOpponent: number | null
   side: Side
+  playerName?: string
+  playerName2?: string
 }
 
 const QUICK_TAGS: { value: NoteTag; label: string; color: string }[] = [
@@ -24,7 +26,7 @@ const QUICK_TAGS: { value: NoteTag; label: string; color: string }[] = [
 const WINNER_SUBS = ['Cross Court', 'Down the Line', 'Overhead Smash', 'Volley', 'Other']
 const UE_SUBS     = ['In the Net', 'Long', 'Wide', 'Shank']
 
-export default function NoteInput({ courtNumber, livePlayer, liveOpponent, side }: Props) {
+export default function NoteInput({ courtNumber, livePlayer, liveOpponent, side, playerName, playerName2 }: Props) {
   const { addNote, courts, updateSet, addSet } = useStore()
   const [content, setContent] = useState('')
   const [selectedTags, setSelectedTags] = useState<NoteTag[]>([])
@@ -33,6 +35,9 @@ export default function NoteInput({ courtNumber, livePlayer, liveOpponent, side 
   const [saving, setSaving] = useState(false)
   const [listening, setListening] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null)
+
+  const isDoubles = !!(playerName && playerName2)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const otherRef = useRef<HTMLInputElement>(null)
   const recognitionRef = useRef<any>(null)
@@ -119,6 +124,7 @@ export default function NoteInput({ courtNumber, livePlayer, liveOpponent, side 
     if (listening) { recognitionRef.current?.stop(); setListening(false) }
 
     const contextParts: string[] = []
+    if (selectedPlayer) contextParts.push(selectedPlayer)
     if (hasLiveScore) contextParts.push(`${livePlayer}–${liveOpponent}`)
     if (side) contextParts.push(side === 'serving' ? 'Serving' : 'Returning')
     const finalContent = contextParts.length ? `[${contextParts.join(' · ')}] ${trimmed}` : trimmed
@@ -144,6 +150,29 @@ export default function NoteInput({ courtNumber, livePlayer, liveOpponent, side 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
+      {/* Player selector for doubles */}
+      {isDoubles && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 font-medium flex-shrink-0">For:</span>
+          <div className="flex gap-1.5">
+            {[playerName!, playerName2!].map(name => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setSelectedPlayer(prev => prev === name ? null : name)}
+                className={clsx(
+                  'text-xs px-3 py-1 rounded-full border transition font-medium truncate max-w-[120px]',
+                  selectedPlayer === name
+                    ? 'bg-green-600/40 text-green-200 border-green-500/60 ring-1 ring-white/20'
+                    : 'bg-gray-800/60 text-gray-500 border-gray-700 hover:text-gray-300 hover:border-gray-600'
+                )}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {/* Tag pills */}
       <div className="flex flex-wrap gap-1.5">
         {QUICK_TAGS.map(tag => (

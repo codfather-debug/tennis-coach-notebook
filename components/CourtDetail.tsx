@@ -513,6 +513,8 @@ export default function CourtDetail({ courtNumber }: Props) {
                   livePlayer={livePlayer}
                   liveOpponent={liveOpponent}
                   side={effectiveSide}
+                  playerName={court.matchType === 'doubles' ? court.playerName : undefined}
+                  playerName2={court.matchType === 'doubles' ? court.playerName2 : undefined}
                 />
                 <QuickLogPanel courtNumber={courtNumber} livePlayer={livePlayer} liveOpponent={liveOpponent} side={effectiveSide} />
               </div>
@@ -533,6 +535,8 @@ export default function CourtDetail({ courtNumber }: Props) {
                   livePlayer={null}
                   liveOpponent={null}
                   side={null}
+                  playerName={court.matchType === 'doubles' ? court.playerName : undefined}
+                  playerName2={court.matchType === 'doubles' ? court.playerName2 : undefined}
                 />
                 <QuickLogPanel courtNumber={courtNumber} livePlayer={null} liveOpponent={null} side={null} />
               </div>

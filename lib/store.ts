@@ -40,6 +40,12 @@ export interface CourtTemplate {
   matchType: MatchType
 }
 
+export interface PointLogSteps {
+  lastShot: boolean
+  rallyLength: boolean
+  where: boolean
+}
+
 interface AppStore {
   courts: CourtState[]
   activeCourt: number | null
@@ -49,8 +55,10 @@ interface AppStore {
   activeMeetId: string | null
   activeMeetName: string | null
   courtTemplates: Record<number, CourtTemplate> | null
+  pointLogSteps: PointLogSteps
 
   setCoachId: (id: string) => void
+  setPointLogSteps: (steps: Partial<PointLogSteps>) => void
   setActiveCourt: (court: number | null) => void
   setCourtCount: (n: number) => void
   setWeather: (w: WeatherSnapshot) => void
@@ -87,8 +95,11 @@ export const useStore = create<AppStore>()(
     activeMeetId: null,
     activeMeetName: null,
     courtTemplates: null,
+    pointLogSteps: { lastShot: true, rallyLength: true, where: true },
 
     setCoachId: (id) => set((s) => { s.coachId = id }),
+
+    setPointLogSteps: (steps) => set((s) => { Object.assign(s.pointLogSteps, steps) }),
 
     setActiveCourt: (court) => set((s) => { s.activeCourt = court as number | null }),
 
